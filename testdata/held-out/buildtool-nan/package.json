@@ -1,0 +1,7 @@
+{
+  "name": "tmp.held-out-nan",
+  "version": "1.0.0",
+  "dependencies": {
+    "nan": "2.19.0"
+  }
+}

@@ -1,0 +1,7 @@
+{
+  "name": "tmp.held-out-rollup",
+  "version": "1.0.0",
+  "dependencies": {
+    "rollup": "4.24.0"
+  }
+}

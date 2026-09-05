@@ -1,0 +1,13 @@
+# Held-out: sodium-native (Pattern B — prebuildify, node-gyp-build loader).
+#
+# sodium-native ships prebuilt libsodium bindings via node-gyp-build. Same shape
+# as utf-8-validate / bufferutil. Fast classify → Prebuildify, risk UNVERIFIED.
+pattern: Prebuildify
+strategy: PREBUILT
+risk: UNVERIFIED
+native: true
+network_calls: 0
+subject: sodium-native
+notes: >
+  Third Pattern B guard. node-gyp-build dependency edge is the sole native
+  signal; no install script, no downloader.

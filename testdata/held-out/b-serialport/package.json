@@ -1,0 +1,7 @@
+{
+  "name": "tmp.held-out-serialport",
+  "version": "1.0.0",
+  "dependencies": {
+    "serialport": "^10.5.0"
+  }
+}

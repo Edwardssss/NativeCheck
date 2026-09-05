@@ -1,0 +1,7 @@
+{
+  "name": "tmp.held-out--parcel-watcher",
+  "version": "1.0.0",
+  "dependencies": {
+    "@parcel/watcher": "2.4.1"
+  }
+}

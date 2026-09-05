@@ -1,0 +1,13 @@
+# 模式 C —— node-pre-gyp 变体（不是 prebuild-install！）：bcrypt@5 依赖
+# @mapbox/node-pre-gyp + node-addon-api，从 binary.host（GitHub Releases）拉
+# {module_name}-v{version}-node-v{abi}-{platform}-{arch}.tar.gz。
+# fast 下远端产物未验证 → UNVERIFIED（--deep 发 HEAD，命中→LOW）。
+# 关键回归：classify 必须识别 @mapbox/node-pre-gyp 为 remote-download（C），
+# 否则会被 node-addon-api 启发式误判成 prebuildify（B）。见 §28 订正 10。
+# 真实 lockfile 由 `npm install --package-lock-only bcrypt@5.1.1` 生成。
+pattern: RemoteDownload
+strategy: PREBUILT
+risk: UNVERIFIED
+native: true
+network_calls: 0
+subject: bcrypt

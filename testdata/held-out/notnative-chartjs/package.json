@@ -1,0 +1,7 @@
+{
+  "name": "tmp.held-out-chartjs",
+  "version": "1.0.0",
+  "dependencies": {
+    "chart.js": "4.4.3"
+  }
+}

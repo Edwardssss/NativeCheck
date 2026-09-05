@@ -1,0 +1,7 @@
+{
+  "name": "tmp.d-node-inotify",
+  "version": "0.0.0",
+  "dependencies": {
+    "node-inotify": "^1.0.0"
+  }
+}

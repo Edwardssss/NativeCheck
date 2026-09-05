@@ -1,0 +1,7 @@
+{
+  "name": "tmp.d-pigpio",
+  "version": "1.0.0",
+  "dependencies": {
+    "pigpio": "^3.3.1"
+  }
+}

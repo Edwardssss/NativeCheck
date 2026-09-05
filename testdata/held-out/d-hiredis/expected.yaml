@@ -1,0 +1,13 @@
+# Held-out: hiredis (Pattern D — source-only via bindings + nan).
+#
+# hiredis compiles the redis parser addon with bindings + nan + `node-gyp
+# rebuild`. Both LEGACY_NATIVE_DEPS signals hit → SourceOnly. strategy
+# SOURCE_BUILD, risk unpinned.
+pattern: SourceOnly
+strategy: SOURCE_BUILD
+native: true
+network_calls: 0
+subject: hiredis
+notes: >
+  Pattern D guard with BOTH legacy signals (bindings + nan) present, confirming
+  the OR-logic converges on SourceOnly regardless of which one fires first.

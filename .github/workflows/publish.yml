@@ -1,0 +1,55 @@
+name: publish
+
+# Release pipeline: publish to npm with provenance attestation (SLSA L3).
+#
+# Trigger: push a tag `v*` (e.g. `v1.0.0`). The tag must match package.json's
+# version — the job asserts this before publishing to prevent a version skew.
+#
+# Provenance requires the OIDC token (`id-token: write`), which proves the
+# tarball was built by this exact workflow on the official repo. See doc/RELEASE.md.
+
+on:
+  push:
+    tags: ['v*']
+
+permissions:
+  contents: read
+  id-token: write # required for `npm publish --provenance`
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    # Only allow tags on the default branch / real repo (skip forks by default;
+    # set ALLOW_FORK_PUBLISH=1 to enable).
+    if: github.repository_owner == 'Edwardssss' || github.ref_type != 'tag'
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          registry-url: 'https://registry.npmjs.org'
+
+      - name: Verify tag matches package.json version
+        run: |
+          tag="${GITHUB_REF_NAME#v}"
+          pkg="$(node -p "require('./package.json').version")"
+          if [ "$tag" != "$pkg" ]; then
+            echo "::error::tag v${tag} != package.json version ${pkg}"
+            exit 1
+          fi
+
+      - run: npm ci
+
+      # Full quality gates before any publish (same contract as CI + prepublishOnly).
+      - run: npm run lint
+      - run: npm run typecheck
+      - run: npm test
+      - run: npm run rules:coverage:strict
+      - run: npm run build
+
+      - name: Publish to npm (with provenance)
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+        run: npm publish --provenance --access public

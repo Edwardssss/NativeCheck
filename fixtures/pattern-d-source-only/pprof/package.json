@@ -1,0 +1,7 @@
+{
+  "name": "tmp.d-pprof",
+  "version": "0.0.0",
+  "dependencies": {
+    "pprof": "^5.0.0"
+  }
+}

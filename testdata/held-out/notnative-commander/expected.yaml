@@ -1,0 +1,9 @@
+# Held-out: commander (NotNative — CLI parser)
+pattern: NotNative
+strategy: none
+risk: LOW
+native: false
+network_calls: 0
+subject: commander
+notes: >
+  Smoke test for NotNative path. Zero deps.

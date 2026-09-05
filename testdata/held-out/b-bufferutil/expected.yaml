@@ -1,0 +1,18 @@
+# Held-out: bufferutil (Pattern B — prebuildify).
+#
+# bufferutil ships `prebuilds/` directory in its tarball; classification signal
+# is depends on `node-gyp-build`. Fast classify yields Prebuildify correctly.
+# But FAST path cannot confirm a matching prebuilt binary exists for the
+# current ABI without --deep (which scans the tarball). So risk stays
+# UNVERIFIED (an honest "we don't know yet — run with --deep"). After --deep
+# this risk would drop to LOW (or HIGH on a mismatch).
+pattern: Prebuildify
+strategy: PREBUILT
+risk: UNVERIFIED
+native: true
+network_calls: 0
+subject: bufferutil
+notes: >
+  Pattern detection: green. Prebuilds existence check: only runs under --deep.
+  Fast-path's UNVERIFIED is the architecturally correct outcome for ANY B/C
+  pattern whose prebuilt artifact cannot be enumerated from the lockfile alone.

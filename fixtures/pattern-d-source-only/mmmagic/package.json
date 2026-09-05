@@ -1,0 +1,7 @@
+{
+  "name": "tmp.d-mmmagic",
+  "version": "1.0.0",
+  "dependencies": {
+    "mmmagic": "^0.5.3"
+  }
+}

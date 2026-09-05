@@ -1,0 +1,7 @@
+{
+  "name": "tmp.held-out-puppeteer",
+  "version": "1.0.0",
+  "dependencies": {
+    "puppeteer": "23.0.0"
+  }
+}

@@ -1,0 +1,7 @@
+{
+  "name": "tmp.held-out-deasync",
+  "version": "1.0.0",
+  "dependencies": {
+    "deasync": "0.1.30"
+  }
+}

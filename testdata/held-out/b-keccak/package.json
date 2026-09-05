@@ -1,0 +1,7 @@
+{
+  "name": "tmp.held-out-keccak",
+  "version": "1.0.0",
+  "dependencies": {
+    "keccak": "^3.0.4"
+  }
+}

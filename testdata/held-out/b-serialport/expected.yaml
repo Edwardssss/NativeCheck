@@ -1,0 +1,7 @@
+# Held-out: @serialport/bindings-cpp (B — prebuildify（prebuilds 在 tarball 内）).
+# 由 _write-expected.mjs 自动生成，待人工 review。
+pattern: Prebuildify
+strategy: PREBUILT
+native: true
+network_calls: 0
+subject: '@serialport/bindings-cpp'

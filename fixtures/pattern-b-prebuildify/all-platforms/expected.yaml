@@ -1,0 +1,10 @@
+# 模式 B —— prebuildify all-platforms：预编译产物打进自身 tarball 的 prebuilds/。
+# better-sqlite3@13 用 node-gyp-build 挑选器（B，非编译）。fast 下 prebuilds/ 清单
+# 需读 tarball（--deep 流式取证）→ 如实标 UNVERIFIED，绝不猜成 HIGH。
+# 真实 lockfile 由 `npm install --package-lock-only better-sqlite3@13.0.3` 生成。
+pattern: Prebuildify
+strategy: PREBUILT
+risk: UNVERIFIED # fast 无取证 → UNVERIFIED（--deep 命中后转 LOW）
+native: true
+network_calls: 0
+subject: better-sqlite3

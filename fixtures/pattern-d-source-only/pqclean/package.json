@@ -1,0 +1,7 @@
+{
+  "name": "tmp.d-pqclean",
+  "version": "0.0.0",
+  "dependencies": {
+    "pqclean": "^0.8.1"
+  }
+}

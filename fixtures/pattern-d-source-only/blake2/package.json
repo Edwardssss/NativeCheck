@@ -1,0 +1,7 @@
+{
+  "name": "tmp.d-blake2",
+  "version": "1.0.0",
+  "dependencies": {
+    "blake2": "^5.0.1"
+  }
+}

@@ -1,0 +1,89 @@
+{
+  "name": "nativecheck",
+  "version": "0.1.0",
+  "description": "A local-first compatibility diagnostics tool for native dependencies — detect, explain and evidence them before your package manager starts compiling.",
+  "keywords": [
+    "native",
+    "node-gyp",
+    "prebuild",
+    "node-api",
+    "dependency-analysis",
+    "compatibility",
+    "cli"
+  ],
+  "license": "GPL-3.0",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Edwardssss/NativeCheck.git"
+  },
+  "homepage": "https://github.com/Edwardssss/NativeCheck#readme",
+  "bugs": {
+    "url": "https://github.com/Edwardssss/NativeCheck/issues"
+  },
+  "author": "Edwardssss",
+  "type": "module",
+  "packageManager": "npm@10.9.7",
+  "engines": {
+    "node": ">=20.17.0"
+  },
+  "bin": {
+    "nativecheck": "./dist/cli.js"
+  },
+  "main": "./dist/index.js",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "tsup",
+    "dev": "tsup --watch",
+    "start": "tsx src/cli/index.ts",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:coverage": "vitest run --coverage",
+    "lint": "eslint .",
+    "lint:fix": "eslint . --fix",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "rules:coverage": "node scripts/check-rule-coverage.mjs",
+    "rules:coverage:strict": "node scripts/check-rule-coverage.mjs --strict",
+    "prepublishOnly": "npm run typecheck && npm run test && npm run build"
+  },
+  "dependencies": {
+    "@npmcli/arborist": "^9.9.1",
+    "citty": "^0.2.2",
+    "cli-table3": "^0.6.5",
+    "consola": "^3.4.2",
+    "detect-libc": "^2.1.2",
+    "js-yaml": "^4.3.2",
+    "node-abi": "^4.35.0",
+    "picocolors": "^1.1.1",
+    "semver": "^7.7.3",
+    "tar": "^7.5.22",
+    "zod": "^4.5.4"
+  },
+  "devDependencies": {
+    "@eslint/js": "^9.39.1",
+    "@types/js-yaml": "^4.0.9",
+    "@types/node": "^22.20.1",
+    "@types/node-abi": "^3.0.3",
+    "@types/semver": "^7.8.0",
+    "eslint": "^9.39.1",
+    "eslint-config-prettier": "^10.1.8",
+    "globals": "^16.5.0",
+    "prettier": "^3.6.2",
+    "tsup": "^8.5.1",
+    "tsx": "^4.23.13",
+    "typescript": "^5.9.3",
+    "typescript-eslint": "^8.46.4",
+    "vitest": "^4.1.11"
+  }
+}

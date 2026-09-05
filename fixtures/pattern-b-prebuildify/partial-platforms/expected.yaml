@@ -1,0 +1,9 @@
+# 模式 B —— prebuildify partial-platforms：microtime 也用 node-gyp-build（B）。
+# fast 下同样 UNVERIFIED（--deep 才知道是否含当前平台产物）。
+# 真实 lockfile 由 `npm install --package-lock-only microtime@3.1.1` 生成。
+pattern: Prebuildify
+strategy: PREBUILT
+risk: UNVERIFIED
+native: true
+network_calls: 0
+subject: microtime

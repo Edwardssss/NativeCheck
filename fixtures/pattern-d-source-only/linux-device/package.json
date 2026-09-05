@@ -1,0 +1,7 @@
+{
+  "name": "tmp.d-linux-device",
+  "version": "0.0.0",
+  "dependencies": {
+    "linux-device": "^2.1.4"
+  }
+}

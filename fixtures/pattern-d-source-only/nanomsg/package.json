@@ -1,0 +1,7 @@
+{
+  "name": "tmp.d-nanomsg",
+  "version": "1.0.0",
+  "dependencies": {
+    "nanomsg": "^4.2.1"
+  }
+}

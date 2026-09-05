@@ -1,0 +1,8 @@
+# 模式 A —— @swc/core 风格（@swc/linux-x64-gnu 等平台子包 + install 脚本 postinstall）。
+# 真实 lockfile 由 `npm install --package-lock-only @swc/core@1.10.0` 生成。
+pattern: PlatformOptionalDeps
+strategy: PREBUILT
+risk: LOW
+native: true
+network_calls: 0
+subject: '@swc/core'

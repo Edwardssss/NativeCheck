@@ -1,0 +1,7 @@
+{
+  "name": "tmp.d-zip-node-addon",
+  "version": "0.0.0",
+  "dependencies": {
+    "zip-node-addon": "^0.0.11"
+  }
+}

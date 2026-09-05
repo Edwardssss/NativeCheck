@@ -1,0 +1,20 @@
+# Held-out: rollup (Pattern A — platform optional-deps cluster).
+#
+# rollup ships its WASM + native bundles via 15+ @rollup/rollup-* platform
+# sub-packages (linux-x64-gnu/musl, darwin, win32-msvc, android, riscv64, ...),
+# plus fsevents as a darwin-only optional dep. All genuinely-optional → Pattern A.
+#
+# Note: the lockfile also carries fsevents (rollup's optional darwin watcher).
+# fsevents has an install script and appears as a SECOND finding (SUSPICIOUS),
+# which is correct fast-path behavior — but the subject under test here is
+# rollup itself, resolved to PlatformOptionalDeps.
+pattern: PlatformOptionalDeps
+strategy: PREBUILT
+risk: LOW
+native: true
+network_calls: 0
+subject: rollup
+notes: >
+  Third Pattern A guard, largest cluster (~17 optional edges). The accompanying
+  fsevents SUSPICIOUS finding is expected and does not affect rollup's own
+  classification.

@@ -1,0 +1,7 @@
+{
+  "name": "tmp.d-node-zpaq",
+  "version": "1.0.0",
+  "dependencies": {
+    "node-zpaq": "^1.0.3"
+  }
+}

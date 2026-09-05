@@ -1,0 +1,7 @@
+{
+  "name": "tmp.d-oniguruma",
+  "version": "1.0.0",
+  "dependencies": {
+    "oniguruma": "^7.2.3"
+  }
+}

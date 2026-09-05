@@ -1,0 +1,12 @@
+# Held-out: node-gyp-build (BuildTool — prebuild loader, not a candidate).
+#
+# node-gyp-build is the runtime binary picker used by prebuildify packages. When
+# it appears in a tree as a dependency, it must NOT itself be reported as a
+# native candidate — it is the reverse index, not the entry point.
+pattern: NotNative
+native: false
+network_calls: 0
+subject: node-gyp-build
+notes: >
+  BuildTool guard for the Pattern B loader itself. Prevents a naive scan from
+  reporting the loader as a native package.

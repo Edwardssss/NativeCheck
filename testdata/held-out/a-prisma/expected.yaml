@@ -1,0 +1,25 @@
+# Held-out: prisma (Pattern A — multi-platform engine binaries, HIDDEN in transitive deps).
+#
+# prisma's @prisma/engines-* 4 optional deps carry the platform-specific query
+# engine binary. But they live as the `dependencies[*].optional` of
+# `@prisma/engines`, NOT of `prisma` directly. The L1 A cluster detector only
+# walks `pkg.dependencies` (one hop, not transitive), so it CANNOT see the
+# cluster from `prisma`'s manifest. Result: prisma→NotNative pattern but
+# SUSPICIOUS verdict (hasInstallScript=true). --deep scanning would resolve it
+# but is not exercised in fast mode.
+#
+# This is a KNOWN held-out gap, not a regression. Pattern A detection works
+# when the cluster lives on the entry package itself (esbuild, sharp, swc);
+# when it lives one hop deeper, L1 needs a transitive optional-dep walk.
+# See temp/known-blindspots.md §2 for the typed-out mitigation plan.
+pattern: NotNative
+strategy: UNKNOWN
+risk: AMBIGUOUS
+native: true
+network_calls: 0
+subject: prisma
+notes: >
+  Cluster is one hop deeper (@prisma/engines → @prisma/engines-{darwin,linux}-*).
+  Fast path cannot see it; SUSPICIOUS is the honest verdict. To make A fire
+  from prisma's edge, the optional deps would have to live under prisma itself
+  (which they do not in registry metadata).

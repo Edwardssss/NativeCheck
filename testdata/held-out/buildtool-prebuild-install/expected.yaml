@@ -1,0 +1,16 @@
+# Held-out: prebuild-install (BuildTool — C downloader, not a candidate).
+#
+# prebuild-install is the Pattern C downloader. It depends on node-abi and
+# napi-build-utils — AUXILIARY signals, NOT native signals. This is the
+# regression guard for a real bug fixed 2026-09-05: reverseLookupRoots used to
+# treat node-abi/napi-build-utils as build-tool signals and misreport
+# prebuild-install itself as a native candidate (NotNative/YES). After the fix,
+# it must produce zero findings.
+pattern: NotNative
+native: false
+network_calls: 0
+subject: prebuild-install
+notes: >
+  BuildTool guard + regression lock for the auxiliary-signal fix. prebuild-install
+  depends on node-abi/napi-build-utils; those must NOT trigger a reverse-lookup
+  native entry point.

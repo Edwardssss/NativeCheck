@@ -1,0 +1,7 @@
+{
+  "name": "tmp.held-out-gc-stats",
+  "version": "1.0.0",
+  "dependencies": {
+    "gc-stats": "^1.4.1"
+  }
+}

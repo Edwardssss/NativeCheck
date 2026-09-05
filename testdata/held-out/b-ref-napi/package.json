@@ -1,0 +1,7 @@
+{
+  "name": "tmp.held-out-ref-napi",
+  "version": "1.0.0",
+  "dependencies": {
+    "ref-napi": "^3.0.3"
+  }
+}

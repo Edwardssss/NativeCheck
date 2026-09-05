@@ -1,0 +1,7 @@
+{
+  "name": "tmp.held-out-commander",
+  "version": "1.0.0",
+  "dependencies": {
+    "commander": "12.1.0"
+  }
+}

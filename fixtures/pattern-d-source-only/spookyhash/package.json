@@ -1,0 +1,7 @@
+{
+  "name": "tmp.d-spookyhash",
+  "version": "1.0.0",
+  "dependencies": {
+    "spookyhash": "^3.0.0"
+  }
+}

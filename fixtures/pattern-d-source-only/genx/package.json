@@ -1,0 +1,7 @@
+{
+  "name": "tmp.d-genx",
+  "version": "0.0.0",
+  "dependencies": {
+    "genx": "^2.0.0"
+  }
+}

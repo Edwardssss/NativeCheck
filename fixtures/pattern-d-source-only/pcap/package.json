@@ -1,0 +1,7 @@
+{
+  "name": "tmp.d-pcap",
+  "version": "1.0.0",
+  "dependencies": {
+    "pcap": "^3.1.0"
+  }
+}

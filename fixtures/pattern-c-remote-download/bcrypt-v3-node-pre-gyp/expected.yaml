@@ -1,0 +1,12 @@
+# 模式 C —— node-pre-gyp 旧 ABI 变体：bcrypt@3 依赖 node-pre-gyp + nan。
+# 与 bcrypt@5 同属 node-pre-gyp（C），但它的 napi 产物只覆盖旧 Node ABI，
+# 现代 Node（如 22/24）下推导 URL 404 → --deep 会转 SOURCE_BUILD + HIGH。
+# fast 下不验证 → 仍如实 UNVERIFIED（绝不猜成 HIGH/LOW）。
+# 关键回归：classify 必须识别 node-pre-gyp（非 @mapbox 前缀）为 C，且 fast 不越权预判风险。
+# 真实 lockfile 由 `npm install --package-lock-only bcrypt@3.0.8` 生成。
+pattern: RemoteDownload
+strategy: PREBUILT
+risk: UNVERIFIED
+native: true
+network_calls: 0
+subject: bcrypt

@@ -1,0 +1,7 @@
+{
+  "name": "tmp.held-out-utf-8-validate",
+  "version": "1.0.0",
+  "dependencies": {
+    "utf-8-validate": "6.0.4"
+  }
+}

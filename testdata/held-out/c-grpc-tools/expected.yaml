@@ -1,0 +1,16 @@
+# Held-out: grpc-tools (Pattern C — @mapbox/node-pre-gyp downloader).
+#
+# grpc-tools downloads prebuilt protoc + gRPC plugins via @mapbox/node-pre-gyp.
+# Its only runtime dependency is @mapbox/node-pre-gyp (a REMOTE_DOWNLOADERS_SET
+# member), so fast classify → RemoteDownload. Risk UNVERIFIED in fast path (the
+# remote host is not HEAD-probed offline; --deep resolves it).
+pattern: RemoteDownload
+strategy: PREBUILT
+risk: UNVERIFIED
+native: true
+network_calls: 0
+subject: grpc-tools
+notes: >
+  Second Pattern C guard (alongside argon2/sqlite3). Exercises the
+  @mapbox/node-pre-gyp branch of the C detector with a package that has NO
+  node-addon-api co-dependency (a cleaner C signal than argon2/sqlite3).

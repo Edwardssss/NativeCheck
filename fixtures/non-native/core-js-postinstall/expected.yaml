@@ -1,0 +1,13 @@
+# 非 native + install 脚本对照组：core-js 是纯 JS，但带 postinstall 脚本
+# （广告/遥测，非 native）。关键：有 install 脚本 ≠ native。
+# 正确行为 = SUSPICIOUS（灰），pattern=NotNative，risk=AMBIGUOUS，绝不误判为 YES/native，
+# 也绝不因为「无 native 特征」而漏掉 install 脚本这一可疑信号。
+# 对照 pure-js-lodash（无 install 脚本 → native:false 无候选）：本样本有候选但非 native。
+# 真实 lockfile 由 `npm install --package-lock-only core-js@3.40.0` 生成。
+pattern: NotNative
+strategy: UNKNOWN
+risk: AMBIGUOUS
+native: true # 存在候选（SUSPICIOUS），但非 native —— 防「漏 install 脚本」与「误判 native」两类回归
+native_count: 1
+network_calls: 0
+subject: core-js

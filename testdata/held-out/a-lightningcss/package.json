@@ -1,0 +1,7 @@
+{
+  "name": "tmp.held-out-lightningcss",
+  "version": "1.0.0",
+  "dependencies": {
+    "lightningcss": "1.29.1"
+  }
+}

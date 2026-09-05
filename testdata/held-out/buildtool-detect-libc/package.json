@@ -1,0 +1,7 @@
+{
+  "name": "tmp.held-out-detect-libc",
+  "version": "1.0.0",
+  "dependencies": {
+    "detect-libc": "2.1.2"
+  }
+}

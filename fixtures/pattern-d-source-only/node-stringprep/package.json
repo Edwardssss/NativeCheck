@@ -1,0 +1,7 @@
+{
+  "name": "tmp.d-node-stringprep",
+  "version": "1.0.0",
+  "dependencies": {
+    "node-stringprep": "^0.8.0"
+  }
+}

@@ -1,0 +1,7 @@
+{
+  "name": "tmp.held-out-bufferutil",
+  "version": "1.0.0",
+  "dependencies": {
+    "bufferutil": "4.0.8"
+  }
+}

@@ -1,0 +1,7 @@
+{
+  "name": "tmp.d-lzo",
+  "version": "1.0.0",
+  "dependencies": {
+    "lzo": "^0.4.11"
+  }
+}

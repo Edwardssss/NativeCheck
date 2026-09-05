@@ -1,0 +1,7 @@
+{
+  "name": "tmp.held-out-secp256k1",
+  "version": "1.0.0",
+  "dependencies": {
+    "secp256k1": "^5.0.1"
+  }
+}

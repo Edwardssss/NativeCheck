@@ -1,0 +1,7 @@
+{
+  "name": "tmp.d-node-opus",
+  "version": "1.0.0",
+  "dependencies": {
+    "node-opus": "^0.3.3"
+  }
+}

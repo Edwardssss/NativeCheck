@@ -1,0 +1,7 @@
+{
+  "name": "tmp.d-tree-sitter-cairo",
+  "version": "0.0.0",
+  "dependencies": {
+    "tree-sitter-cairo": "^0.0.2"
+  }
+}

@@ -1,0 +1,9 @@
+# 模式 D —— source-only：sleep 用 nan + node-gyp，必然本地源码编译（无预编译）。
+# strategy 恒为 SOURCE_BUILD（环境无关）。risk 依赖本机工具链是否齐全 →
+# 具编译器机器 LOW/MEDIUM、缺编译器 HIGH，故 expected 不 pin risk（环境相关）。
+# 真实 lockfile 由 `npm install --package-lock-only sleep@6.3.0` 生成。
+pattern: SourceOnly
+strategy: SOURCE_BUILD
+native: true
+network_calls: 0
+subject: sleep

@@ -1,0 +1,5 @@
+# 非 native 对照组：纯 JS 的 lodash 不应产生任何 native 候选（nativeCandidates=0）。
+# 真实 lockfile 由 `npm install --package-lock-only lodash@4.17.21` 生成。
+native: false
+native_count: 0 # 断言：不产生 native 候选（区别于「有候选但非 native」）
+network_calls: 0

@@ -1,0 +1,7 @@
+{
+  "name": "tmp.held-out-node-sass",
+  "version": "1.0.0",
+  "dependencies": {
+    "node-sass": "^9.0.0"
+  }
+}

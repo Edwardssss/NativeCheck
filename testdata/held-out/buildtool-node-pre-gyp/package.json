@@ -1,0 +1,7 @@
+{
+  "name": "tmp.held-out-node-pre-gyp",
+  "version": "1.0.0",
+  "dependencies": {
+    "node-pre-gyp": "0.17.0"
+  }
+}

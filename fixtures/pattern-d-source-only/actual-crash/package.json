@@ -1,0 +1,7 @@
+{
+  "name": "tmp.d-actual-crash",
+  "version": "0.0.0",
+  "dependencies": {
+    "actual-crash": "^1.0.3"
+  }
+}

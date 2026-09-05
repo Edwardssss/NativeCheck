@@ -1,0 +1,10 @@
+# 模式 A —— esbuild 风格，**lockfileVersion 2** 变体（v2 是 v3 的超集，§3.3 声称支持）。
+# 与 esbuild-style 同语义同判定，仅 lockfile 是 v2 —— 证明 v2 下 arborist loadVirtual
+# 仍能读全平台可选依赖簇并正确分类（非「读得到但分类错位」）。
+# 真实 lockfile 由 `npm install --package-lock-only --lockfile-version=2 esbuild@0.25.0` 生成。
+pattern: PlatformOptionalDeps
+strategy: PREBUILT
+risk: LOW
+native: true
+network_calls: 0
+subject: esbuild

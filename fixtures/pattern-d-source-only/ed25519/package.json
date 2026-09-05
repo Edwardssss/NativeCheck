@@ -1,0 +1,7 @@
+{
+  "name": "tmp.d-ed25519",
+  "version": "1.0.0",
+  "dependencies": {
+    "ed25519": "^0.0.5"
+  }
+}

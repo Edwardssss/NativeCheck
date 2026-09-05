@@ -1,0 +1,7 @@
+{
+  "name": "tmp.d-node-xxhash",
+  "version": "1.0.0",
+  "dependencies": {
+    "node-xxhash": "^0.3.0"
+  }
+}

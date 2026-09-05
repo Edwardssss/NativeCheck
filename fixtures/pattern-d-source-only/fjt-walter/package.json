@@ -1,0 +1,7 @@
+{
+  "name": "tmp.d-fjt-walter",
+  "version": "0.0.0",
+  "dependencies": {
+    "fjt-walter": "^1.1.0"
+  }
+}

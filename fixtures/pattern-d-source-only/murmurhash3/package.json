@@ -1,0 +1,7 @@
+{
+  "name": "tmp.d-murmurhash3",
+  "version": "1.0.0",
+  "dependencies": {
+    "murmurhash3": "^0.5.0"
+  }
+}

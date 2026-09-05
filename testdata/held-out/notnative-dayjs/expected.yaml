@@ -1,0 +1,11 @@
+# Held-out: dayjs (NotNative — zero-dependency pure JS date library).
+#
+# dayjs has zero runtime dependencies and no install script. Trivial NotNative
+# case — must produce no findings.
+pattern: NotNative
+native: false
+network_calls: 0
+subject: dayjs
+notes: >
+  NotNative smoke test, zero deps. Also guards that a package with a `build`/`lint`
+  dev script (not install/postinstall) is not mistaken for a native install script.

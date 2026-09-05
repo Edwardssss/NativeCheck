@@ -1,0 +1,7 @@
+{
+  "name": "tmp.d-node-statvfs",
+  "version": "1.0.0",
+  "dependencies": {
+    "node-statvfs": "^0.0.2"
+  }
+}

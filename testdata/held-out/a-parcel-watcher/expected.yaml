@@ -1,0 +1,21 @@
+# Held-out: @parcel/watcher (Pattern A — platform optional-deps cluster).
+#
+# @parcel/watcher ships a native FS watcher via 12 @parcel/watcher-* platform
+# sub-packages (linux-x64-glibc/musl, darwin, win32, android, freebsd, ...),
+# declared as genuinely-optional dependencies. This is the canonical Pattern A:
+# the entry package is pure JS, the binary lives in optional platform packages.
+# Fast classify hits hasPlatformCluster (>= PLATFORM_CLUSTER_THRESHOLD optional
+# edges) → PlatformOptionalDeps. It also depends on node-addon-api + detect-libc,
+# but the A detector runs first.
+pattern: PlatformOptionalDeps
+strategy: PREBUILT
+risk: LOW
+native: true
+network_calls: 0
+subject: '@parcel/watcher'
+notes: >
+  Generalization guard for Pattern A (optional-dep cluster) on a package where
+  the cluster lives DIRECTLY under the entry package — the counter-case to
+  a-prisma/a-puppeteer, where the cluster is one hop deeper and fast path
+  correctly does NOT see it. node-addon-api + detect-libc are present but A
+  wins by detector ordering.

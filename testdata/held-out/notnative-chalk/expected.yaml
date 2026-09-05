@@ -1,0 +1,10 @@
+# Held-out: chalk@5 (NotNative — pure ESM)
+# Modern chalk has zero runtime dependencies and no native signals.
+pattern: NotNative
+strategy: none
+risk: LOW
+native: false
+network_calls: 0
+subject: chalk
+notes: >
+  Smoke test for NotNative path. Pure ESM, no deps.

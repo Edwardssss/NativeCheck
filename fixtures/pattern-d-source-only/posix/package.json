@@ -1,0 +1,7 @@
+{
+  "name": "tmp.d-posix",
+  "version": "1.0.0",
+  "dependencies": {
+    "posix": "^4.2.0"
+  }
+}

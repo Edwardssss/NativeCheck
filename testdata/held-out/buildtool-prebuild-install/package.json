@@ -1,0 +1,7 @@
+{
+  "name": "tmp.held-out-prebuild-install",
+  "version": "1.0.0",
+  "dependencies": {
+    "prebuild-install": "7.1.2"
+  }
+}

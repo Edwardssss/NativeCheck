@@ -1,0 +1,10 @@
+# 模式 A —— @node-rs/argon2 风格：@node-rs/argon2-linux-x64-gnu 等平台子包簇。
+# 与 esbuild/swc 同机制（主包 JS + N 个可选平台原生子包），零编译、零风险。
+# 补强模式 A 的非 JS-bundler 样本（密码学原生库），防「只认识 esbuild/swc」的过拟合。
+# 真实 lockfile 由 `npm install --package-lock-only @node-rs/argon2@2.0.2` 生成。
+pattern: PlatformOptionalDeps
+strategy: PREBUILT
+risk: LOW
+native: true
+network_calls: 0
+subject: '@node-rs/argon2'

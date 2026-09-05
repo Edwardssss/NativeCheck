@@ -1,0 +1,7 @@
+{
+  "name": "tmp.d-i2c",
+  "version": "1.0.0",
+  "dependencies": {
+    "i2c": "^0.4.0"
+  }
+}

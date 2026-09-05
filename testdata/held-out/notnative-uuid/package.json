@@ -1,0 +1,7 @@
+{
+  "name": "tmp.held-out-uuid",
+  "version": "1.0.0",
+  "dependencies": {
+    "uuid": "10.0.0"
+  }
+}

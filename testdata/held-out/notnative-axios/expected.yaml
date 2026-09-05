@@ -1,0 +1,12 @@
+# Held-out: axios (NotNative — pure JS HTTP client).
+#
+# axios is pure JS (follow-redirects / form-data / proxy-from-env, all pure JS).
+# No install script, no build-tool dep, no platform cluster. Must NOT surface as
+# a native candidate.
+pattern: NotNative
+native: false
+network_calls: 0
+subject: axios
+notes: >
+  NotNative guard for a widely-depended-on pure-JS package. Guards against the
+  transitive-dep false positive (its deps are all pure JS).

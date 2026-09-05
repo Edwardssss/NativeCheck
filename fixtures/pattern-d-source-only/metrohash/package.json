@@ -1,0 +1,7 @@
+{
+  "name": "tmp.d-metrohash",
+  "version": "1.0.0",
+  "dependencies": {
+    "metrohash": "^3.2.0"
+  }
+}

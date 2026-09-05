@@ -1,0 +1,12 @@
+# Held-out: bindings (BuildTool — runtime helper)
+# `bindings` is a JS loader that locates native .node files by name.
+# It is NOT a native package itself. Build-tool classification required.
+pattern: NotNative
+strategy: none
+risk: LOW
+native: false
+network_calls: 0
+subject: bindings
+notes: >
+  Build-tool detection: bindings is in `NATIVE_BUILD_TOOLS` allowlist.
+  Generalization guard for the loader-vs-package boundary.

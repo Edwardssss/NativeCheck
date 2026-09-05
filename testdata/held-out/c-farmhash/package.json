@@ -1,0 +1,7 @@
+{
+  "name": "tmp.held-out-farmhash",
+  "version": "1.0.0",
+  "dependencies": {
+    "farmhash": "^4.0.1"
+  }
+}

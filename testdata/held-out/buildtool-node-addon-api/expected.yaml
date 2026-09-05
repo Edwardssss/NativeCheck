@@ -1,0 +1,15 @@
+# Held-out: node-addon-api (BuildTool — N-API header library)
+# node-addon-api is a C++ header library providing N-API wrappers.
+# When classified alone, it's a build-tool. When a package's deps include it
+# AND that package has install scripts, it goes to Pattern D (SourceOnly).
+# When a package's deps include it AND no install scripts, it's Pattern B.
+pattern: NotNative
+strategy: none
+risk: LOW
+native: false
+network_calls: 0
+subject: node-addon-api
+notes: >
+  Build-tool detection. Generalization guard: ensures the B/D branch
+  selection (test/install-script.test.ts, see "node-addon-api && hasInstallScript") is
+  properly gated on the parent package's install-script presence.

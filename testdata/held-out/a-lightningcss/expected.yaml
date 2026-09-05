@@ -1,0 +1,17 @@
+# Held-out: lightningcss (Pattern A — platform optional-deps cluster).
+#
+# lightningcss ships a native CSS parser/minifier via 10 lightningcss-*
+# platform sub-packages (linux-x64-gnu/musl, darwin, win32-msvc, android,
+# freebsd, ...), all genuinely-optional. Same canonical Pattern A shape as
+# @parcel/watcher. Its only non-optional runtime dep is detect-libc (a
+# SUSPICIOUS_DEPS weak signal) — the A detector must win before that matters.
+pattern: PlatformOptionalDeps
+strategy: PREBUILT
+risk: LOW
+native: true
+network_calls: 0
+subject: lightningcss
+notes: >
+  Second Pattern A generalization guard. detect-libc is present as a normal
+  dependency, so this also checks that a weak auxiliary signal does not shadow
+  the platform-cluster classification.

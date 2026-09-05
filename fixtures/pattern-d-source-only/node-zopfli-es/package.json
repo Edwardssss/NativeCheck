@@ -1,0 +1,7 @@
+{
+  "name": "tmp.d-node-zopfli-es",
+  "version": "1.0.0",
+  "dependencies": {
+    "node-zopfli-es": "^2.0.6"
+  }
+}

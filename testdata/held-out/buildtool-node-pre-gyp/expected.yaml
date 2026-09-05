@@ -1,0 +1,11 @@
+# Held-out: node-pre-gyp (BuildTool — C downloader, not a candidate).
+#
+# node-pre-gyp is the legacy Pattern C downloader (superseded by
+# @mapbox/node-pre-gyp). As a dependency it is the reverse index, never a native
+# candidate on its own.
+pattern: NotNative
+native: false
+network_calls: 0
+subject: node-pre-gyp
+notes: >
+  BuildTool guard for the legacy node-pre-gyp downloader.

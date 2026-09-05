@@ -1,0 +1,10 @@
+# 模式 A —— esbuild 风格（主包 + N 个 @esbuild/<platform> 可选子包）。
+# 有 install 脚本(挑选器)但零风险，防误报。
+# 真实 package-lock.json 由 `npm install --package-lock-only esbuild@0.25.0` 生成，
+# arborist loadVirtual 直接可读，无需 node_modules。
+pattern: PlatformOptionalDeps
+strategy: PREBUILT
+risk: LOW
+native: true # 关键：纯 JS 检测器会漏报（esbuild 本体是 JS，native 在平台子包）
+network_calls: 0 # 关键：断言零网络，防回归
+subject: esbuild

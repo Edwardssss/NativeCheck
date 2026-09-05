@@ -1,0 +1,7 @@
+{
+  "name": "tmp.held-out-leveldown",
+  "version": "1.0.0",
+  "dependencies": {
+    "leveldown": "^6.1.1"
+  }
+}

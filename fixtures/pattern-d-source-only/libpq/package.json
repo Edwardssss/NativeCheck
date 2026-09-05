@@ -1,0 +1,7 @@
+{
+  "name": "tmp.d-libpq",
+  "version": "1.0.0",
+  "dependencies": {
+    "libpq": "^1.11.0"
+  }
+}

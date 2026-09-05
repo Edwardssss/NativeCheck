@@ -1,0 +1,77 @@
+name: ground-truth
+
+# Ground Truth Docker matrix (design doc §13): real npm installs + a compiler
+# wrapper, producing L1/L2/L3 accuracy numbers to catch rule decay. Slow,
+# independent from the main CI, scheduled weekly + manual trigger.
+#
+# Run the main CI once before this to ensure the code is testable. This job
+# runs the glibc cells on a linux-x64 runner; alpine (musl) and darwin/win32
+# are covered locally / on dedicated runners (see README).
+on:
+  workflow_dispatch: # manual: repo Actions → Run workflow
+  schedule:
+    - cron: '0 3 * * 1' # every Monday 03:00 UTC
+
+jobs:
+  matrix:
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    strategy:
+      fail-fast: false
+      matrix:
+        # glibc (bookworm) + musl (alpine) cells for each major Node on linux-x64
+        cell:
+          - { node: '20', libc: glibc }
+          - { node: '22', libc: glibc }
+          - { node: '24', libc: glibc }
+          - { node: '20', libc: musl }
+          - { node: '22', libc: musl }
+          - { node: '24', libc: musl }
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - run: npm ci
+      - run: npm run build # produce dist/cli.js for predict.sh to run --deep inside containers
+
+      # 1) Run the real install measurement + L2 prediction for the target cell
+      #    (same container, env-accurate). run-matrix.sh calls probe-install.sh per
+      #    fixture (the compiler wrapper decides `compiled`) and predict.sh
+      #    (nativecheck --deep → out/<cell>/<fixture>.prediction.json).
+      #    The L2 prediction shares the cell env with the measurement
+      #    (node/libc/toolchain) — otherwise the four-square table is meaningless.
+      #    Never predict from the host.
+      - name: Run matrix cell ${{ matrix.cell.node }}-${{ matrix.cell.libc }}
+        env:
+          NC_NODE_MAJORS: ${{ matrix.cell.node }}
+          NC_LIBMODES: ${{ matrix.cell.libc }}
+        run: bash testdata/ground-truth/run-matrix.sh
+
+      # 2) Aggregate the four-square table (collect.py auto-reads prediction.json
+      #    inside each cell; no --predict needed)
+      - name: Collect L2 table
+        run: python3 testdata/ground-truth/collect.py testdata/ground-truth/out --blockers
+
+      # 3) Threshold gate: fail when the L2 false-negative rate exceeds the cap
+      #    (prevents silent rule decay)
+      - name: Enforce FN gate
+        run: |
+          out=$(python3 testdata/ground-truth/collect.py testdata/ground-truth/out --blockers 2>&1)
+          echo "$out"
+          # Extract the FN rate; anything above 5% fails (FN is the most severe
+          # error class, weighted ×2 per design doc §13.3)
+          rate=$(echo "$out" | sed -n 's/.*L2 FN漏报率=\([0-9.]*\)%.*/\1/p' | head -1)
+          if [ -n "$rate" ] && awk "BEGIN{exit !($rate > 5)}"; then
+            echo "::error::L2 FN 漏报率 ${rate}% 超过 5% 阈值"
+            exit 1
+          fi
+          echo "FN gate passed (${rate:-n/a}%)"
+
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: ground-truth-${{ matrix.cell.node }}-${{ matrix.cell.libc }}
+          path: testdata/ground-truth/out/

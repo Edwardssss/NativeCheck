@@ -1,0 +1,7 @@
+{
+  "name": "tmp.d-sse4-crc32",
+  "version": "1.0.0",
+  "dependencies": {
+    "sse4_crc32": "^7.0.0"
+  }
+}

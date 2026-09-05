@@ -1,0 +1,7 @@
+{
+  "name": "tmp.held-out-grpc-tools",
+  "version": "1.0.0",
+  "dependencies": {
+    "grpc-tools": "1.12.4"
+  }
+}

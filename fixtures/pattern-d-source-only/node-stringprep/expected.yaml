@@ -1,0 +1,7 @@
+# 模式 D —— source-only：node-stringprep 纯 node-gyp rebuild（无 node-gyp-build/prebuild-install）。
+# strategy 恒为 SOURCE_BUILD；risk 依赖工具链 → 不 pin。
+pattern: SourceOnly
+strategy: SOURCE_BUILD
+native: true
+network_calls: 0
+subject: node-stringprep

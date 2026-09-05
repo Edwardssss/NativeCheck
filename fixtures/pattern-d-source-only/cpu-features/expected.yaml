@@ -1,0 +1,8 @@
+# 模式 D —— source-only：cpu-features 用 nan + node-gyp（ssh2 的可选加速器），必然源码编译。
+# strategy 恒为 SOURCE_BUILD（环境无关）。risk 依赖工具链是否齐全 → 不 pin（环境相关）。
+# 真实 lockfile 由 `npm install --package-lock-only cpu-features@0.0.10` 生成。
+pattern: SourceOnly
+strategy: SOURCE_BUILD
+native: true
+network_calls: 0
+subject: cpu-features

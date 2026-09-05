@@ -1,0 +1,19 @@
+{
+  "NATIVE_BUILD_TOOLS": [
+    "node-addon-api",
+    "nan",
+    "node-gyp-build",
+    "prebuild-install",
+    "node-pre-gyp",
+    "@mapbox/node-pre-gyp",
+    "bindings",
+    "node-abi",
+    "napi-build-utils"
+  ],
+  "PREBUILDIFY_LOADERS": ["node-gyp-build"],
+  "REMOTE_DOWNLOADERS": ["prebuild-install", "node-pre-gyp", "@mapbox/node-pre-gyp"],
+  "LEGACY_NATIVE_DEPS": ["nan", "bindings"],
+  "NAPI_HEADERS": ["node-addon-api"],
+  "AUXILIARY_NATIVE_DEPS": ["node-abi", "napi-build-utils"],
+  "PLATFORM_CLUSTER_THRESHOLD": 5
+}

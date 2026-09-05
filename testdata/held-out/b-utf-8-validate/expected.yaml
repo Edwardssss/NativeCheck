@@ -1,0 +1,16 @@
+# Held-out: utf-8-validate (Pattern B — prebuildify, node-gyp-build loader).
+#
+# utf-8-validate is ws's other optional native accelerator (alongside
+# bufferutil). It depends on node-gyp-build and ships `prebuilds/` in its own
+# tarball; no install script. Fast classify → Prebuildify. Risk stays UNVERIFIED
+# in fast path (the prebuilt binary cannot be enumerated offline; --deep would
+# resolve it).
+pattern: Prebuildify
+strategy: PREBUILT
+risk: UNVERIFIED
+native: true
+network_calls: 0
+subject: utf-8-validate
+notes: >
+  Second Pattern B guard (alongside bufferutil). Confirms node-gyp-build is
+  detected as the prebuild picker, not misread as a compiler (node-gyp).

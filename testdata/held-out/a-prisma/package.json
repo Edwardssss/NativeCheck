@@ -1,0 +1,7 @@
+{
+  "name": "tmp.held-out-prisma",
+  "version": "1.0.0",
+  "dependencies": {
+    "prisma": "5.10.0"
+  }
+}

@@ -1,0 +1,19 @@
+# Held-out: deasync (Pattern D — source-only via bindings).
+#
+# deasync depends on `bindings` (+ node-addon-api), which hits the LEGACY_NATIVE_DEPS
+# signal → SourceOnly. strategy is SOURCE_BUILD; risk is NOT pinned here (it
+# depends on the local toolchain, per the fixtures/ Pattern D convention).
+#
+# 注意（2026-09-05）：deasync 的 install 是 `node ./build.js`，会先检查 tarball
+# 自带的 `bin/{plat}-{arch}-node-{v}/deasync.node` 预编译产物，命中则不编译
+# （bundled-prebuilt-first，见 known-blindspots §1.5）。L1 只看 lockfile 的
+# bindings+node-addon-api+hasInstallScript，无法看到脚本体 → 判 SourceOnly 是
+# L1 的正确输出；但这意味着 deasync 的「真编译 vs 免编」在 L1 层不可分辨。
+pattern: SourceOnly
+strategy: SOURCE_BUILD
+native: true
+network_calls: 0
+subject: deasync
+notes: >
+  Pattern D guard on the `bindings` branch (LEGACY_NATIVE_DEPS). deasync has
+  node-addon-api too, but `bindings` is checked first and both map to SourceOnly.

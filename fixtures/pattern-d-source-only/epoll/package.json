@@ -1,0 +1,7 @@
+{
+  "name": "tmp.d-epoll",
+  "version": "1.0.0",
+  "dependencies": {
+    "epoll": "^4.0.2"
+  }
+}

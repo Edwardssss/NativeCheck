@@ -1,0 +1,7 @@
+{
+  "name": "tmp.d-unix-dgram",
+  "version": "1.0.0",
+  "dependencies": {
+    "unix-dgram": "^2.0.7"
+  }
+}

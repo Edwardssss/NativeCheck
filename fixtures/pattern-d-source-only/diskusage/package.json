@@ -1,0 +1,7 @@
+{
+  "name": "tmp.d-diskusage",
+  "version": "1.0.0",
+  "dependencies": {
+    "diskusage": "^1.2.0"
+  }
+}

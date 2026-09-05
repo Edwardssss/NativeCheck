@@ -1,0 +1,7 @@
+{
+  "name": "tmp.d-raw-socket",
+  "version": "1.0.0",
+  "dependencies": {
+    "raw-socket": "^1.8.1"
+  }
+}

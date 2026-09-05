@@ -1,0 +1,15 @@
+# Held-out: sqlite3 (Pattern C — node-pre-gyp with @mapbox/node-pre-gyp).
+#
+# Same generalization guard as c-argon2: sqlite3 depends on @mapbox/node-pre-gyp
+# AND node-addon-api. The C-before-B detection order is the regression guard.
+#
+# The `optionalDependencies.sqlite3-libsql-binding` field is a separate
+# prebuilt-binding attempt; the C signal is what fast-path sees first.
+pattern: RemoteDownload
+strategy: PREBUILT
+risk: UNVERIFIED
+native: true
+network_calls: 0
+subject: sqlite3
+notes: >
+  Exercises C-before-B ordering. Risk-UNVERIFIED is fast-path compromise.

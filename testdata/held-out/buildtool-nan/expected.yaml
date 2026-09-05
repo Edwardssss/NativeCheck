@@ -1,0 +1,14 @@
+# Held-out: nan (BuildTool — not a candidate itself)
+# nan is a C++ header library consumed by other native packages.
+# NativeCheck must classify it as a build-tool dependency, NOT as a native candidate.
+# Critical regression guard: a naive scan could misclassify this as a native package.
+pattern: NotNative
+strategy: none
+risk: LOW
+native: false
+network_calls: 0
+subject: nan
+notes: >
+  Build-tool detection: nan is in `NATIVE_BUILD_TOOLS` allowlist. Without
+  this allowlist, scanning `nan` alone would attempt to classify its
+  (empty) dependencies as a real native package.

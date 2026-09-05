@@ -1,0 +1,9 @@
+# Held-out: chart.js (NotNative — visualization library)
+pattern: NotNative
+strategy: none
+risk: LOW
+native: false
+network_calls: 0
+subject: chart.js
+notes: >
+  Pure JS. Dep `@kurkle/color` is also pure JS.

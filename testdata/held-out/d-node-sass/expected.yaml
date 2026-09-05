@@ -1,0 +1,7 @@
+# Held-out: node-sass (D — source-only（本地源码编译）).
+# 由 _write-expected.mjs 自动生成，待人工 review。
+pattern: SourceOnly
+strategy: SOURCE_BUILD
+native: true
+network_calls: 0
+subject: node-sass

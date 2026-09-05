@@ -1,0 +1,7 @@
+{
+  "name": "tmp.held-out-hiredis",
+  "version": "1.0.0",
+  "dependencies": {
+    "hiredis": "0.5.0"
+  }
+}

@@ -1,0 +1,7 @@
+{
+  "name": "tmp.held-out-dayjs",
+  "version": "1.0.0",
+  "dependencies": {
+    "dayjs": "1.11.13"
+  }
+}

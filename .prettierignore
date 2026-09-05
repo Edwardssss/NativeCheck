@@ -1,0 +1,10 @@
+# Third-party fixture data must stay byte-for-byte (edits would break test input fidelity)
+fixtures/unsupported/pnpm-lock/pnpm-lock.yaml
+testdata/pnpm/pnpm-lock.yaml
+
+# Long markdown docs are not reflowed by prettier (preserve manual line breaks and table layout)
+doc/*.md
+fixtures/README.md
+
+# Build artifacts (belt and braces; usually already covered by .gitignore)
+tsup.config.bundled_*.mjs

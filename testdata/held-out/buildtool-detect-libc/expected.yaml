@@ -1,0 +1,14 @@
+# Held-out: detect-libc (Weak signal — SUSPICIOUS_DEPS, not a native candidate).
+#
+# detect-libc is a pure-JS libc detector. It is deliberately a SUSPICIOUS_DEPS
+# weak signal (far too common to imply native by itself). As a standalone
+# dependency it must produce zero native findings — it is not in
+# NATIVE_BUILD_TOOLS, and the forward pass never flags it.
+pattern: NotNative
+native: false
+network_calls: 0
+subject: detect-libc
+notes: >
+  Guard that the deliberately-excluded weak signal (detect-libc) does not leak
+  into native classification. Also covers the fact that SUSPICIOUS_DEPS is
+  intentionally NOT wired into verdictFor (see classify.ts).

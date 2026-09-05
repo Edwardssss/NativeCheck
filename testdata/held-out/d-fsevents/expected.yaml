@@ -1,0 +1,30 @@
+# Held-out: fsevents (Pattern B-prebuildify for macOS, NOT D).
+#
+# fsevents v2 ships prebuilt binaries in its own tarball under `prebuilds/`
+# (one per macOS arch). At install time, if a prebuild matches, the loader
+# skips compilation; otherwise it falls back to `node-gyp rebuild`. So:
+#
+#   - PRIMARY distribution = B (Prebuildify), per the working memory rule
+#     "node-gyp-build = binary picker (→ B, no compile first)".
+#   - FALLBACK compile path exists, so a naive scan might suspect D, but D
+#     only matters when B is absent. With fsevents v2, B is present and wins.
+#
+# Fast classify hits `node-gyp-build` at line 50 of classify.ts BEFORE the
+# install-script check at line 64 (which would classify it as D). The
+# earlier check is correct here — and the C-before-B lesson confirms that
+# ordering matters in both directions.
+#
+# Risk is UNVERIFIED in fast path (no tarball probe). On Darwin with a
+# matching prebuild, --deep would resolve to LOW.
+pattern: Prebuildify
+strategy: PREBUILT
+risk: UNVERIFIED
+native: true
+network_calls: 0
+subject: fsevents
+notes: >
+  Detection is correct as B (Prebuildify) because fsevents v2's primary path
+  is the prebuilt binary. The D label in the previous expected file was an
+  assertion mistake carried over from the spec draft; this fixture
+  documents the real behavior. The "fallback compile" exists but is
+  second-order and not the primary distribution.

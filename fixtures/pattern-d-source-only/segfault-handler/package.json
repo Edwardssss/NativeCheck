@@ -1,0 +1,7 @@
+{
+  "name": "tmp.d-segfault-handler",
+  "version": "1.0.0",
+  "dependencies": {
+    "segfault-handler": "^1.3.0"
+  }
+}

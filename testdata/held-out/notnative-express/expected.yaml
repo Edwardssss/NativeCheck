@@ -1,0 +1,12 @@
+# Held-out: express (NotNative — web framework, many JS deps)
+# express has many sub-deps but ALL are pure JavaScript.
+# Critical: a transitive dep search should NOT touch any native build tool.
+pattern: NotNative
+strategy: none
+risk: LOW
+native: false
+network_calls: 0
+subject: express
+notes: >
+  Smoke test for transitive-dep NotNative path. None of express's
+  sub-deps touch the build-tool allowlist.

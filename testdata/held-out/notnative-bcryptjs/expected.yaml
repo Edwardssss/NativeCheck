@@ -1,0 +1,14 @@
+# Held-out: bcryptjs (pure JS, NOT native despite the name)
+# bcryptjs is a pure JavaScript implementation — never compiles, never downloads.
+# Critical generalization check: many devlopers assume "bcrypt-* = native", but
+# this package is the deliberate exception. The rule is: check for actual native
+# signals, do NOT match by name prefix.
+pattern: NotNative
+strategy: none
+risk: LOW
+native: false
+network_calls: 0
+subject: bcryptjs
+notes: >
+  Negative case for name-prefix heuristics. Real-world confusion source:
+  `bcrypt` (native) vs `bcryptjs` (pure JS). NativeCheck must distinguish.

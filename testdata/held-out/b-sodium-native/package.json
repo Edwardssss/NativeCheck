@@ -1,0 +1,7 @@
+{
+  "name": "tmp.held-out-sodium-native",
+  "version": "1.0.0",
+  "dependencies": {
+    "sodium-native": "4.1.1"
+  }
+}

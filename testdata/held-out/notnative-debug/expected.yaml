@@ -1,0 +1,11 @@
+# Held-out: debug (NotNative — pure JS, single ms dependency).
+#
+# debug depends only on `ms` (pure JS). No install script, no native signal.
+# Must produce no findings.
+pattern: NotNative
+native: false
+network_calls: 0
+subject: debug
+notes: >
+  NotNative guard with one trivial transitive dep (ms). Confirms a normal
+  dependency edge does not trip any build-tool reverse lookup.

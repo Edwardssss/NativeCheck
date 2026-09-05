@@ -1,0 +1,7 @@
+{
+  "name": "tmp.d-bignum",
+  "version": "1.0.0",
+  "dependencies": {
+    "bignum": "^0.13.1"
+  }
+}

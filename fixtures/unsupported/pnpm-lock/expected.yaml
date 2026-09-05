@@ -1,0 +1,7 @@
+# pnpm-lock.yaml 现为**支持格式**（见 testdata/pnpm 集成测试）。
+# 本 fixture 是「不完整 pnpm（有 packages 无 snapshots）」→ parsePnpmLockfile
+# 返回空 → ingest 返回 unsupported（Fail Closed），断言 reason 提及 pnpm。
+unsupported: true
+detected: pnpm-lock.yaml
+reason_contains: pnpm
+network_calls: 0

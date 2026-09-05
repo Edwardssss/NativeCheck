@@ -1,0 +1,13 @@
+# Held-out: uuid (NotNative — pure JS, zero runtime deps).
+#
+# uuid@10 has zero runtime dependencies. It has a `prepare` dev script (husky),
+# but `prepare` is not an install/postinstall lifecycle hook that runs on
+# registry installs, so hasInstallScript stays false. Must produce no findings.
+pattern: NotNative
+native: false
+network_calls: 0
+subject: uuid
+notes: >
+  NotNative guard that specifically exercises the `prepare`-script edge case:
+  a package whose only script is `prepare` (husky) must NOT be flagged as having
+  a native install script.

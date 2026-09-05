@@ -1,0 +1,12 @@
+# 模式 C —— remote-download：keytar 依赖 node-addon-api + prebuild-install（C）。
+# 与 canvas 同机制：prebuild-install 从远端拉预编译二进制。
+# fast 下远端产物未验证 → UNVERIFIED（--deep 发 HEAD，命中→LOW）。
+# 注意含 2 个 finding：keytar(native,C) + prebuild-install(工具,NotNative)；
+# 用 subject 只断言 native 入口 keytar。
+# 真实 lockfile 由 `npm install --package-lock-only keytar@7.9.0` 生成。
+pattern: RemoteDownload
+strategy: PREBUILT
+risk: UNVERIFIED
+native: true
+network_calls: 0
+subject: keytar

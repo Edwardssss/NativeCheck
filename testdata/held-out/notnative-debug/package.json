@@ -1,0 +1,7 @@
+{
+  "name": "tmp.held-out-debug",
+  "version": "1.0.0",
+  "dependencies": {
+    "debug": "4.3.7"
+  }
+}

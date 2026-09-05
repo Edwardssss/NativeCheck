@@ -1,0 +1,21 @@
+# Held-out: puppeteer (Pattern A — Chromium binaries via optionalDeps, HIDDEN).
+#
+# Real puppeteer has 25+ `@puppeteer/*-platform-*` sub-packages that carry the
+# Chromium downloader for each platform. But in registry metadata, those live
+# as transitive deps of `@puppeteer/browsers`, not as `puppeteer`'s direct
+# optional deps. So L1's A cluster detector cannot reach them from `puppeteer`.
+# Result: NotNative pattern + SUSPICIOUS verdict (hasInstallScript=true).
+#
+# The puppeteer Chromium download at install time is REAL and should be
+# classified as native. The gap is the L1 transitive walk, exactly as with
+# prisma. Held-out set documents both: not a regression, a known limitation.
+pattern: NotNative
+strategy: UNKNOWN
+risk: AMBIGUOUS
+native: true
+network_calls: 0
+subject: puppeteer
+notes: >
+  Same blindspot as a-prisma: A cluster lives one hop deeper than the entry
+  package. Tracking as known-blindspot; a future "transitive optional cluster"
+  detector could close this without changing fast-path's zero-network rule.
