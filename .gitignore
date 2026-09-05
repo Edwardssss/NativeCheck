@@ -1,0 +1,42 @@
+node_modules/
+dist/
+coverage/
+temp/
+*.tsbuildinfo
+
+# Logs
+*.log
+npm-debug.log*
+yarn-error.log*
+
+# Editors / OS
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/*
+!.vscode/extensions.json
+
+# tsup build-time temp artifacts (bundled files left in the repo root when packing tsup.config)
+tsup.config.bundled_*.mjs
+
+# Environment variables
+.env
+.env.*
+!.env.example
+
+# Local caches (runtime cache lives in ~/.cache/nativecheck; only ignore accidental in-repo artifacts)
+.nativecheck/
+
+# Agent / editor workspace metadata (session memory etc.), not committed
+.workbuddy/
+
+# Real install artifacts inside fixtures, not committed
+fixtures/**/node_modules/
+fixtures/**/package-lock.json.bak
+testdata/ground-truth/**/install.log
+testdata/ground-truth/**/compile-log.txt
+# Ground Truth Docker matrix runtime output (out/ is not committed)
+testdata/ground-truth/out/
+# Python bytecode caches (produced when collect.py syntax-checks)
+__pycache__/
+*.pyc
