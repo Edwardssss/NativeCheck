@@ -95,6 +95,7 @@ npm run rules:coverage:strict   # 规则表覆盖率（CI 门禁）
 ## 特性
 
 - **默认本地检测**：默认路径完全离线，不发任何网络请求；`--deep` 才联网，且结果落盘缓存。
+- **按需懒加载**：CLI 入口按子命令懒加载——`env` / `--help` / 参数报错等轻命令不加载扫描引擎，只有 `scan` / `explain` / `target` 才按需 `import`（重依赖如 `@npmcli/arborist` 不会在启动时全量加载），冷启动大幅下降。
 - **诊断四类 native 分发模式**：平台专属可选依赖（A）、prebuildify（B）、安装时远端下载（C）、纯源码构建（D）。
 - **可溯源**：结果会标注它到底是复刻了 npm/node-gyp 自己的决策逻辑（复刻型，≈100%）、基于约定的推测（推测型，80–95%）、还是离线未验证（未验证）。
 - **Fail Closed**：检测不到时如实报「未验证 / 不确定」（灰色），绝不猜成「高风险」；不确定的结论恒带「如何变确定」的提示。
@@ -161,7 +162,6 @@ NativeCheck 用 ground-truth 自证准确率：在真实容器里跑 `npm instal
 
 - [ ] 添加 yarn.lock / bun.lockb 支持
 - [ ] 添加跨平台支持（Windows、macOS）
-- [ ] CLI 入口按子命令懒加载，去除冷启动耗时
 
 ## License
 

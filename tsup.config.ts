@@ -10,7 +10,10 @@ export default defineConfig({
   platform: 'node',
   dts: true,
   clean: true,
-  splitting: false,
+  // Code-split so the CLI can `await import()` the scan path on demand. With
+  // splitting off, local modules are inlined and `@npmcli/arborist`'s import is
+  // hoisted to the eager top of the bundle, defeating the lazy cold-start win.
+  splitting: true,
   sourcemap: true,
   shims: true,
 })
