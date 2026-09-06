@@ -58,6 +58,8 @@ export {
   mergeHookIntents,
 } from './adapters/node/install-script'
 export { parsePnpmLockfile } from './adapters/node/pnpm'
+export { parseYarnLockfile } from './adapters/node/yarn'
+export { parseBunLockfile } from './adapters/node/bun'
 export { allowScriptsPolicy } from './adapters/node/npm-policy'
 export { systemLibHint } from './adapters/node/system-libs'
 export type { NativeCandidate, ClassificationResult } from './adapters/node/classify'

@@ -3,15 +3,19 @@
 核心资产 —— 按分发模式组织的回归样本。
 
 任何判定规则的改动必须补 fixture；`network_calls: 0` 是硬断言（维持默认路径零网络）。
-`test/fixtures.test.ts` 是 fixture-runner：遍历每个含 `package-lock.json` + `expected.yaml`
-的样本，用 `scan(<dir>, { mode: 'fast' })` 扫描并对照期望（零网络）。
+`test/fixtures.test.ts` 是 fixture-runner：遍历每个含 `expected.yaml` 的样本（native 样本
+配 lockfile，unsupported 样本配畸形 lockfile），用 `scan(<dir>, { mode: 'fast' })`
+扫描并对照期望（零网络）。
 
-覆盖目标： 四种分发模式各 ≥3 个真实样本，lockfile v2+v3 均可读，
-v1/yarn/bun 均明确退出（Fail Closed），pnpm-lock.yaml 已支持（见 `testdata/pnpm`）。当前 A=5、B=3、C=5、D=53、
-非 native 对照组 2、格式对照 4（共 72 样本；其中 native 样本 A+B+C+D = 66 ≥ 60，满足 rule-of-three 的 ≤5% FN 置信度门槛）。
+覆盖目标： 四种分发模式各 ≥3 个真实样本，lockfile 全格式可读（npm package-lock v2+v3 /
+pnpm-lock.yaml / yarn.lock v1+Berry / 二进制 bun.lockb，均见 `testdata/` 集成样本），
+畸形 lockfile 一律明确退出（Fail Closed）。当前 A=5、B=3、C=5、D=53、
+非 native 对照组 2、格式对照 4（共 73 样本；其中 native 样本 A+B+C+D = 66 ≥ 60，
+满足 rule-of-three 的 ≤5% FN 置信度门槛）。
 关键：模式 C 覆盖 prebuild-install 与 node-pre-gyp 两类下载器，非 native 覆盖「无 install 脚本」（lodash）与
 「有 install 脚本」（core-js→SUSPICIOUS）两类，防判定过拟合。模式 D 全部经 Docker 编译器 wrapper
 实测 `compiled=yes + install=ok`（真编译，非静态信号），覆盖现代 N-API 与 nan 两类源码编译路径。
+
 
 ## 目录约定
 
@@ -92,11 +96,11 @@ fixtures/
 ├── non-native/                            # 2 样本
 │   ├── pure-js-lodash/          # 防误报：纯 JS，零 native 候选（无 install 脚本）
 │   └── core-js-postinstall/     # 纯 JS + postinstall → SUSPICIOUS/AMBIGUOUS（有候选非 native）
-└── unsupported/                          # v1/yarn/bun 明确退出（pnpm 已支持，见 testdata/pnpm）
-    ├── bun-lock/                # bun.lockb → Fail Closed
-    ├── lockfile-v1/             # package-lock.json v1 → Fail Closed
+└── unsupported/                          # 畸形 lockfile → Fail Closed（各格式已支持，见 testdata/）
+    ├── bun-malformed/           # 畸形 bun.lockb（随机字节）→ Fail Closed
+    ├── lockfile-v1/             # package-lock.json v1 → Fail Closed（v1 结构未适配）
     ├── pnpm-lock/               # 不完整 pnpm（有 packages 无 snapshots）→ Fail Closed
-    └── yarn-lock/               # yarn.lock → Fail Closed
+    └── yarn-malformed/          # 畸形 yarn.lock（无合法顶层 entry）→ Fail Closed
 ```
 
 每个样本含（fixture-runner 的硬前提）：
@@ -116,7 +120,7 @@ subject: esbuild              # 可选；多 native 候选时用于定位目标�
 network_calls: 0              # 关键：断言零网络，防回归
 ```
 
-对 `unsupported` 样本（pnpm-lock / lockfile-v1）：
+对 `unsupported` 样本（pnpm-lock / lockfile-v1 / yarn-malformed / bun-malformed）：
 
 ```yaml
 unsupported: true

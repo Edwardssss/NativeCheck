@@ -1,0 +1,7 @@
+# bun.lockb 现为支持格式（见 testdata/bun-lockb 集成测试）。
+# 本 fixture 是**畸形 bun.lockb**（随机字节，头部不合法）→ parseBunLockfile 抛错
+# → ingest 返回 unsupported（Fail Closed），断言 reason 提及 bun。
+unsupported: true
+detected: bun.lockb
+reason_contains: bun
+network_calls: 0
