@@ -2,7 +2,7 @@
 /**
  * NativeCheck CLI entry point.
  *
- * Command contract (V0.1 ships scan (default) / env / explain):
+ * Command contract (V0.1 ships scan (default) / env / explain / target):
  *   nativecheck                 # equivalent to `scan .`, --fast: 0 network calls
  *   nativecheck .               # scan a project root (default command; a directory as first arg works)
  *   nativecheck <dir> --deep    # online forensics for B/C prebuilt artifacts (1–3s, results cached)
@@ -10,6 +10,13 @@
  *   nativecheck <dir> --ci      # CI: non-zero exit when a blocker / HIGH risk exists
  *   nativecheck env             # environment check-up
  *   nativecheck explain <pkg>   # evidence chain for a single package
+ *   nativecheck target <pkg>[@version] [--deep] [--json]  # single-package diagnostic
+ *
+ * Lazy loading: `@npmcli/arborist` (the dominant ~1.6s cold-start cost) and `zod`
+ * are pulled only by the scan/explain/target paths. This entry therefore keeps its
+ * imports light and loads those heavy modules on demand per sub-command, so `env`,
+ * `--help`, and argument errors start fast. The library entry (`src/index.ts`) stays
+ * fully eager for programmatic consumers; only the CLI defers.
  *
  * Why manual dispatch: citty's `findSubCommandIndex` treats the first non-flag
  * token (e.g. `.`) as a sub-command name and cannot express "scan by default with
@@ -20,11 +27,8 @@ import pc from 'picocolors'
 import { resolve } from 'node:path'
 import { parseArgs } from 'citty'
 import { scanEnvironment } from '../env'
-import { scan } from '../adapters/node/pipeline'
-import { scanTarget } from '../adapters/node/target'
-import { summarize, type ScanReport } from '../core/report'
-import { scanReportSchema } from '../core/schema'
 import { renderEnvironment, renderReport } from './render'
+import { summarize, type ScanReport } from '../core/report'
 
 /** Flag definitions for scan (citty, type-safe). */
 const SCAN_ARGS = {
@@ -54,6 +58,7 @@ async function runScan(
   flags: { deep?: boolean; json?: boolean; ci?: boolean; cache?: boolean },
 ): Promise<void> {
   const projectRoot = resolve(dir || '.')
+  const { scan } = await import('../adapters/node/pipeline')
   const { report } = await scan(projectRoot, {
     mode: flags.deep ? 'deep' : 'fast',
     // --no-cache → cache:false → explicitly disable the disk cache; fast mode never writes anyway.
@@ -62,6 +67,7 @@ async function runScan(
 
   if (flags.json) {
     // The zod validation guarantees the JSON contract; it is also dogfooding of the schema.
+    const { scanReportSchema } = await import('../core/schema')
     console.log(JSON.stringify(scanReportSchema.parse(report), null, 2))
   } else {
     console.log(renderReport(report))
@@ -81,6 +87,7 @@ async function runEnv(): Promise<void> {
 
 async function runExplain(query: string): Promise<void> {
   const projectRoot = resolve('.')
+  const { scan } = await import('../adapters/node/pipeline')
   const { report } = await scan(projectRoot, { mode: 'fast' })
   const bareName = query.split('@')[0]
   const hit = report.findings.find((f) => f.pkg.name === query || f.pkg.name === bareName)
@@ -107,8 +114,10 @@ async function runTarget(
     process.exitCode = 1
     return
   }
+  const { scanTarget } = await import('../adapters/node/target')
   const report = await scanTarget(query, { deep: flags.deep })
   if (flags.json) {
+    const { scanReportSchema } = await import('../core/schema')
     console.log(JSON.stringify(scanReportSchema.parse(report), null, 2))
   } else {
     console.log(renderReport(report))
