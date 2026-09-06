@@ -153,14 +153,15 @@ NativeCheck 用 ground-truth 自证准确率：在真实容器里跑 `npm instal
 ✓ Node.js ≥ 20.17 · npm
 ✓ package.json + package-lock.json   （lockfileVersion 2 / 3）
 ✓ pnpm-lock.yaml                     （packages + snapshots 结构）
-✗ lockfileVersion 1 · Yarn · Bun     （检测到即明确退出）
+✓ yarn.lock                          （v1 classic + Berry __metadata）
+✓ bun.lockb                          （二进制，经解码复用 yarn v1 归一化）
+✗ lockfileVersion 1 · bun 文本 bun.lock（检测到即明确退出）
 ```
 
 > 系统库探测（`System library` 段）目前仅在 Linux 上跑（`pkg-config`），macOS / Windows 后期会加入支持。
 
 ## 后续开发
 
-- [ ] 添加 yarn.lock / bun.lockb 支持
 - [ ] 添加跨平台支持（Windows、macOS）
 
 ## License

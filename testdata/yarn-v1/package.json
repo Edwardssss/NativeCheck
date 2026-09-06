@@ -1,0 +1,11 @@
+{
+  "name": "yarn-v1-sample",
+  "private": true,
+  "dependencies": {
+    "esbuild": "^0.19.0",
+    "better-sqlite3": "^11.0.0"
+  },
+  "optionalDependencies": {
+    "fsevents": "^2.3.2"
+  }
+}

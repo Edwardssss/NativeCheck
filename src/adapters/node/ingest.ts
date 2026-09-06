@@ -6,9 +6,11 @@
  * node_modules and makes no network calls), normalizes it into
  * `LockfilePackage[]`, and hands it to Layer 1 for classification.
  *
- * Read-only over the lockfile. On unsupported formats (pnpm / yarn / bun /
- * lockfile v1) it explicitly returns `unsupported` — **exit rather than guess**
- * (Fail Closed).
+ * Read-only over the lockfile. On truly unsupported formats (yarn/lockfile v1
+ * and bun text `bun.lock` stay as they were) it explicitly returns
+ * `unsupported` — **exit rather than guess** (Fail Closed). Supported adapters:
+ * npm package-lock.json (arborist), pnpm-lock.yaml, yarn.lock (v1 + Berry) and
+ * binary bun.lockb — each normalized into the same `LockfilePackage[]` shape.
  */
 import { existsSync, readFileSync } from 'node:fs'
 import { join } from 'node:path'
@@ -16,6 +18,8 @@ import { Arborist, type Node } from '@npmcli/arborist'
 import type { IngestedGraph, LockfilePackage } from './signals'
 import { indexPackages } from './signals'
 import { parsePnpmLockfile } from './pnpm'
+import { parseYarnLockfile } from './yarn'
+import { parseBunLockfile } from './bun'
 
 export interface IngestResult {
   readonly ok: true
@@ -28,12 +32,6 @@ export interface IngestUnsupported {
   readonly reason: string
 }
 export type IngestOutcome = IngestResult | IngestUnsupported
-
-/** Lockfile name → whether supported. */
-const LOCKFILES: readonly { file: string; label: string }[] = [
-  { file: 'package-lock.json', label: 'npm (package-lock.json)' },
-  { file: 'pnpm-lock.yaml', label: 'pnpm (pnpm-lock.yaml)' },
-]
 
 /** Read the lockfileVersion of package-lock.json. Returns 1/2/3 or undefined. */
 function lockfileVersion(projectRoot: string): number | undefined {
@@ -50,9 +48,11 @@ function lockfileVersion(projectRoot: string): number | undefined {
 /**
  * Probe whether the project root is supported.
  *
- * Supported: npm package-lock.json with lockfileVersion 2 / 3 (v2 is a superset of v3).
- * Unsupported: pnpm-lock.yaml / yarn.lock / bun.lockb / lockfileVersion 1.
- * When no npm lockfile is found we also return an explicit `detected` so the
+ * Supported: npm package-lock.json (lockfileVersion 2 / 3), pnpm-lock.yaml,
+ * yarn.lock (v1 + Berry), binary bun.lockb. Detection is by lockfile presence;
+ * the adapters that read them decide whether the content is well-formed.
+ * Unsupported: lockfileVersion 1 (different schema) and bun's text `bun.lock`.
+ * When no lockfile is found we also return an explicit `detected` so the
  * caller can exit.
  */
 export function probeLockfile(projectRoot: string): {
@@ -65,10 +65,10 @@ export function probeLockfile(projectRoot: string): {
     return { supported: true, detected: 'pnpm-lock.yaml' }
   }
   if (existsSync(join(projectRoot, 'yarn.lock'))) {
-    return { supported: false, detected: 'yarn.lock', reason: 'yarn 不在 V0.1 支持范围' }
+    return { supported: true, detected: 'yarn.lock' }
   }
   if (existsSync(join(projectRoot, 'bun.lockb'))) {
-    return { supported: false, detected: 'bun.lockb', reason: 'bun 不在 V0.1 支持范围' }
+    return { supported: true, detected: 'bun.lockb' }
   }
   const version = lockfileVersion(projectRoot)
   if (version === undefined) {
@@ -82,7 +82,7 @@ export function probeLockfile(projectRoot: string): {
       reason: 'lockfile v1 结构不同，需单独适配',
     }
   }
-  return { supported: true, detected: LOCKFILES[0]?.label ?? 'npm', version }
+  return { supported: true, detected: 'npm (package-lock.json)', version }
 }
 
 /** Extract one lockfile package record from an arborist node. */
@@ -144,6 +144,42 @@ export async function ingest(projectRoot: string): Promise<IngestOutcome> {
         ok: false,
         detected: 'pnpm-lock.yaml',
         reason: `pnpm-lock.yaml 解析失败：${error instanceof Error ? error.message : String(error)}`,
+      }
+    }
+  }
+
+  // yarn.lock（v1 classic + Berry）：行式缩进格式，非 YAML/JSON。
+  if (probe.detected === 'yarn.lock') {
+    try {
+      const content = readFileSync(join(projectRoot, 'yarn.lock'), 'utf8')
+      const list = parseYarnLockfile(content)
+      if (list.length === 0) {
+        return { ok: false, detected: 'yarn.lock', reason: 'yarn.lock 解析失败或为空' }
+      }
+      return { ok: true, graph: indexPackages(list), format: 'yarn (yarn.lock)' }
+    } catch (error) {
+      return {
+        ok: false,
+        detected: 'yarn.lock',
+        reason: `yarn.lock 解析失败：${error instanceof Error ? error.message : String(error)}`,
+      }
+    }
+  }
+
+  // bun.lockb：二进制，经 @hyrious/bun.lockb 解码为 yarn v1 文本再解析。
+  if (probe.detected === 'bun.lockb') {
+    try {
+      const buf = readFileSync(join(projectRoot, 'bun.lockb'))
+      const list = parseBunLockfile(buf)
+      if (list.length === 0) {
+        return { ok: false, detected: 'bun.lockb', reason: 'bun.lockb 解析失败或为空' }
+      }
+      return { ok: true, graph: indexPackages(list), format: 'bun (bun.lockb)' }
+    } catch (error) {
+      return {
+        ok: false,
+        detected: 'bun.lockb',
+        reason: `bun.lockb 解析失败：${error instanceof Error ? error.message : String(error)}`,
       }
     }
   }

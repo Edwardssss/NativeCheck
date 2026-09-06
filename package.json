@@ -58,6 +58,7 @@
     "prepublishOnly": "npm run typecheck && npm run test && npm run build"
   },
   "dependencies": {
+    "@hyrious/bun.lockb": "^0.0.4",
     "@npmcli/arborist": "^9.9.1",
     "citty": "^0.2.2",
     "cli-table3": "^0.6.5",

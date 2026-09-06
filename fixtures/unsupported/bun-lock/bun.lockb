@@ -1,4 +1,0 @@
-bun.lockb — Bun's binary lockfile (binary format).
-This marker stands in for a real bun.lockb. probe 判定只看文件存在，
-故二进制内容无关紧要；此处用文本占位便于入库审阅。
-真实 bun.lockb 是二进制（"bun.lock" v1/v2），由 `bun install` 生成。
