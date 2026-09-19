@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Ground Truth Docker matrix orchestration (design doc §13.2/§13.4).
+# Ground Truth Docker matrix orchestration.
 #
 # Matrix: Node {20,22,24} × libc {glibc, musl} × {linux-x64} (x64 can run on this machine;
 # arm64/darwin/win32 use GitHub Actions runners, see .github/workflows).

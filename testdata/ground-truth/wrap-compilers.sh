@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Compiler wrapper installation (design doc §13.1). Every C/C++ compile call leaves a trace in
+# Compiler wrapper installation. Every C/C++ compile call leaves a trace in
 # the log, proving 100% precisely whether a local build happened -- far more reliable than
 # grepping `gyp ERR!` logs.
 #

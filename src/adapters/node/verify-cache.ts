@@ -8,7 +8,7 @@
  * the only place that knows whether the network was really touched), but a hit
  * must never let UNVERIFIED be guessed into HIGH (match still reports Replay).
  *
- * The three implementation deviations from design doc §14.2 (key / TTL /
+ * The three implementation choices behind the cache format (key / TTL /
  * location) are recorded in §28.
  */
 import { mkdir, readFile, rename, writeFile } from 'node:fs/promises'

@@ -2,7 +2,7 @@
  * Terminal rendering: turn a ScanReport / environment snapshot into the kind of
  * text block shown in the README examples.
  *
- * Maps to design doc §2, §11.3, §11.4. Kept as pure functions so it is
+ * Rendering layer. Kept as pure functions so it is
  * testable — no console is passed in.
  */
 import pc from 'picocolors'

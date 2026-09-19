@@ -1,7 +1,7 @@
 /**
  * Evidence and reliability annotation.
  *
- * Maps to design doc §4.5, §9.2, §9.3, §11, §19.4
+ * Evidence model: what a finding is allowed to claim, and how strongly.
  *
  * Core claim: **output should not carry a single confidence percentage, but
  * describe how each conclusion was derived.** "87% confidence" is false

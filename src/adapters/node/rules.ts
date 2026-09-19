@@ -12,7 +12,7 @@
  * and this file (switch cases), so the strict coverage gate still guards the
  * rule surface after the split.
  *
- * Maps to design doc §10.1, §10.2, §11.2
+ * Detection rules, grouped by the signal each one replays.
  */
 import rules from './rules.json'
 

@@ -1,7 +1,7 @@
 /**
  * Layer 0 signal model.
  *
- * All five raw signal types defined in design doc §10.1 come from the lockfile, with zero network:
+ * All five raw signal types come from the lockfile, with zero network:
  *
  * | Signal | Lockfile field | Reliability |
  * |---|---|---|

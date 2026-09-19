@@ -8,7 +8,7 @@
  *
  * **But the probe can only verify "the compiler runs", not "this package will
  * build"** — the latter requires actually building it, which is out of scope for
- * this tool (design doc §19.3).
+ * this tool.
  */
 
 import { execFileSync } from 'node:child_process'
@@ -144,7 +144,7 @@ export function detectCompiler(): CompilerInfo | undefined {
  *
  * Covers only the two most common blocker sources: Xcode Command Line Tools on
  * macOS and the MSVC build tools on Windows. System libraries (libcairo etc.) are
- * out of scope — see design doc §19.2: package names differ per distribution, so
+ * out of scope: package names differ per distribution, so
  * static enumeration is unrealistic.
  */
 export function detectSdks(platform = process.platform): readonly Sdk[] {

@@ -4,7 +4,7 @@
  * Core knows nothing about npm / pip / Cargo internals — it only understands
  * the model defined here; ecosystems are just Adapters (see `src/adapters/node`).
  *
- * Maps to design doc §9
+ * Core domain model: packages, distribution patterns, verdicts, reliability.
  */
 
 /** Supported ecosystems. V0.1 implements node only. */
@@ -48,7 +48,7 @@ export interface PackageRef {
 /**
  * Distribution pattern — the key abstraction missing from the v1 design.
  *
- * See design doc §5, §9.1
+ * See "The four distribution patterns" in the README.
  */
 export enum DistributionPattern {
   /** A: main package + N `os`/`cpu` constrained binary sub-packages (esbuild, sharp, swc…). 100% detectable with zero network. */

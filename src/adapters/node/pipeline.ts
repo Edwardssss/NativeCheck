@@ -6,7 +6,7 @@
  *
  * Network requests drop from O(all packages) to O(candidates). Fast mode hard
  * asserts zero network (networkCalls === 0); that assertion is the only reliable
- * way to keep the default path fully offline (design doc §13.5, §17).
+ * way to keep the default path fully offline.
  */
 import { scanEnvironment } from '../../env'
 import { summarize, type ScanReport } from '../../core/report'

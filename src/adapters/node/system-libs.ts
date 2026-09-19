@@ -5,7 +5,7 @@
  * source / binding.gyp, invisible to a zero-network lockfile scan, so a
  * name lookup is the only offline signal available. It is used ONLY to emit a
  * "possibly missing <lib>" advisory for SourceBuild findings — it never changes risk or
- * blockers (ADR-001: do not predict install success; the package may bundle the
+ * blockers (never predict install success: the package may bundle the
  * library, or the name association may be wrong).
  */
 

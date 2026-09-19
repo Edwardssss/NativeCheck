@@ -1,7 +1,7 @@
 /**
  * Report model and aggregation.
  *
- * Maps to design doc §9.4, §11.3, §11.4
+ * The report a scan produces, and how findings are summarised.
  */
 
 import type {
