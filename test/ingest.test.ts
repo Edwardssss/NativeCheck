@@ -90,7 +90,7 @@ function viteLike(peerNames: readonly string[]): Record<string, unknown> {
   }
 }
 
-describe('ingest · S5 platform cluster counts only the package\'s own optionalDependencies', () => {
+describe("ingest · S5 platform cluster counts only the package's own optionalDependencies", () => {
   it('optional peers (peerDependenciesMeta.optional) are not a platform cluster', async () => {
     const peers = ['less', 'sass', 'terser', 'tsx', 'yaml', 'sugarss']
     const packages = await ingestProject({
@@ -133,7 +133,7 @@ describe('ingest · S5 platform cluster counts only the package\'s own optionalD
 })
 
 describe('ingest · S1 platform constraints (os / cpu / libc) are no longer dropped', () => {
-  it('a sub-package\'s os / cpu are collected (arborist keeps them only on node.package)', async () => {
+  it("a sub-package's os / cpu are collected (arborist keeps them only on node.package)", async () => {
     const packages = await ingestProject({
       dependencies: { 'esbuild-like': '1.0.0' },
       packages: {

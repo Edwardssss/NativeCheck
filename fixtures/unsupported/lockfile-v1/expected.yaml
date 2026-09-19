@@ -1,5 +1,5 @@
-# 不支持格式：lockfile v1 → 明确退出，不做猜测（Fail Closed）。
-# 断言 scan 返回 report.unsupported 且 reason 提及 v1。
+# Unsupported format: lockfile v1 → exit explicitly rather than guess (fail closed).
+# Asserts scan returns report.unsupported and that the reason mentions v1.
 unsupported: true
 detected: package-lock.json v1
 reason_contains: v1

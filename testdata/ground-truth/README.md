@@ -6,7 +6,7 @@ any single call proves a local compile happened. A C/C++ addon cannot become a
 `.node` without going through a compiler, which is far more reliable than
 scraping `gyp ERR!` output.
 
-> `make` is deliberately *not* wrapped: node-gyp runs `make BUILDTYPE=Release`
+> `make` is deliberately _not_ wrapped: node-gyp runs `make BUILDTYPE=Release`
 > even for an empty target (better-sqlite3 v13 turns the implicit
 > `node-gyp rebuild` into a no-op via `prebuild_exists`), so wrapping it would
 > report `compiled=yes` for packages that never compiled. Real compilation must
@@ -91,11 +91,11 @@ four-square table with a 5% FN gate.
 
 ## Metrics by layer
 
-| Layer | Question                               | Metric                        |
-| ----- | -------------------------------------- | ----------------------------- |
-| L1    | Is this package native?                | miss rate (weighted ×2)       |
-| L2    | Prebuilt binary or local source build? | FP / FN rate                  |
-| L3    | Which toolchain pieces are missing?    | blocker recall                |
+| Layer | Question                               | Metric                  |
+| ----- | -------------------------------------- | ----------------------- |
+| L1    | Is this package native?                | miss rate (weighted ×2) |
+| L2    | Prebuilt binary or local source build? | FP / FN rate            |
+| L3    | Which toolchain pieces are missing?    | blocker recall          |
 
 ## Continuous regression
 

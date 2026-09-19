@@ -1,5 +1,5 @@
-# 模式 D —— source-only：pigpio 纯 node-gyp rebuild（无 node-gyp-build/prebuild-install）。
-# strategy 恒为 SOURCE_BUILD；risk 依赖工具链 → 不 pin。
+# Pattern D — source-only: pigpio is a plain node-gyp rebuild (no node-gyp-build / prebuild-install).
+# strategy is always SOURCE_BUILD; risk depends on the toolchain, so it is never pinned.
 pattern: SourceOnly
 strategy: SOURCE_BUILD
 native: true

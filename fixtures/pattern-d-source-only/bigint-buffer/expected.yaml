@@ -1,7 +1,7 @@
-# 模式 D —— source-only：bigint-buffer 用 bindings + node-gyp rebuild（N-API），
-# 无 node-gyp-build/prebuild-install → 必然源码编译。注意其 install 有 `|| echo`
-# 优雅降级（构建失败时退化为纯 JS 版本），但不影响「source-only」分类。
-# strategy 恒为 SOURCE_BUILD；risk 依赖工具链 → 不 pin。
+# Pattern D — source-only: bigint-buffer builds with bindings + node-gyp rebuild (N-API) and has
+# no node-gyp-build / prebuild-install, so it always compiles. Its install script degrades
+# gracefully (`|| echo`: a failed build falls back to the pure-JS implementation), which does
+# not change the source-only classification. strategy is always SOURCE_BUILD; risk is not pinned.
 pattern: SourceOnly
 strategy: SOURCE_BUILD
 native: true

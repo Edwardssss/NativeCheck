@@ -14,14 +14,26 @@ import { parseInstallScript } from '../../dist/index.js'
 
 const CASES = [
   // [name, version?, known real behaviour (manually curated ground truth)]
-  ['sqlite3', undefined, 'node-pre-gyp downloads the binding; compile on failure -> expect download_then_compile'],
+  [
+    'sqlite3',
+    undefined,
+    'node-pre-gyp downloads the binding; compile on failure -> expect download_then_compile',
+  ],
   ['fsevents', undefined, 'local build -> expect compile'],
   ['microtime', undefined, 'local build -> expect compile'],
   ['grpc', '1.24.11', 'node-pre-gyp download; compile on failure -> expect download_then_compile'],
   ['node-sass', undefined, 'scripts/install.js custom download logic -> actually download'],
   ['electron', undefined, 'install.js downloads the Electron binary -> actually download'],
-  ['cypress', undefined, 'index.js --exec install downloads the Cypress binary -> actually download'],
-  ['@biomejs/biome', undefined, 'postinstall verifies the optionalDeps artifact (benign) -> expect select'],
+  [
+    'cypress',
+    undefined,
+    'index.js --exec install downloads the Cypress binary -> actually download',
+  ],
+  [
+    '@biomejs/biome',
+    undefined,
+    'postinstall verifies the optionalDeps artifact (benign) -> expect select',
+  ],
   ['esbuild', '0.15.18', 'older install.js (optionalDeps already covers it) -> observe'],
   ['core-js-pure', undefined, 'pure core-js build (watch for scripts)'],
   ['es5-ext', undefined, 'same author as core-js; watch whether the node -e rule matches'],

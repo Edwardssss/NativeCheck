@@ -1,6 +1,6 @@
-# yarn.lock 现为支持格式（见 testdata/yarn-v1 + yarn-berry 集成测试）。
-# 本 fixture 是**畸形 yarn.lock**（无合法顶层 entry）→ parseYarnLockfile 返回空
-# → ingest 返回 unsupported（Fail Closed），断言 reason 提及 yarn。
+# yarn.lock is a supported format now (see the testdata/yarn-v1 and yarn-berry integration tests).
+# This fixture is a **malformed yarn.lock** (no valid top-level entry) → parseYarnLockfile returns
+# empty → ingest returns unsupported (fail closed); the assertion checks the reason mentions yarn.
 unsupported: true
 detected: yarn.lock
 reason_contains: yarn

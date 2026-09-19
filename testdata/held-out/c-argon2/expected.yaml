@@ -2,12 +2,12 @@
 #
 # Critical generalization check: argon2 depends on BOTH @mapbox/node-pre-gyp
 # (Pattern C signal) AND node-addon-api (Pattern B heuristic). Without the
-# C-before-B detection ordering (lesson from benchmark G, see CHANGELOG
-# 订正 11), argon2 would be misclassified as Prebuildify. Held-out set
-# catches ordering regressions.
+# C-before-B detection ordering (a lesson from the benchmark set), argon2
+# would be misclassified as Prebuildify. The held-out set catches ordering
+# regressions.
 #
-# Risk is UNVERIFIED in fast path because we can't HEAD-probe the downloader's
-# remote host without leaving zero-network. --deep would resolve to LOW or HIGH.
+# Risk stays UNVERIFIED on the fast path: probing the downloader's remote host
+# would leave zero-network. --deep resolves it to LOW or HIGH.
 pattern: RemoteDownload
 strategy: PREBUILT
 risk: UNVERIFIED

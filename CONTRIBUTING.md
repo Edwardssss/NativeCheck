@@ -45,11 +45,11 @@ assertion: it is what keeps the default path offline.
 
 Accuracy is tracked in three layers:
 
-| Layer | Question                                  | Metric                       |
-| ----- | ----------------------------------------- | ---------------------------- |
-| L1    | Is this package native?                   | miss rate (weighted ×2)      |
-| L2    | Prebuilt binary or local source build?    | FP / FN rate                 |
-| L3    | Which toolchain pieces are missing?       | blocker recall               |
+| Layer | Question                               | Metric                  |
+| ----- | -------------------------------------- | ----------------------- |
+| L1    | Is this package native?                | miss rate (weighted ×2) |
+| L2    | Prebuilt binary or local source build? | FP / FN rate            |
+| L3    | Which toolchain pieces are missing?    | blocker recall          |
 
 Ground truth comes from compiler wrappers: `cc` / `gcc` / `g++` / `clang` are
 replaced by recorders, and any call proves a local compile happened. A C/C++

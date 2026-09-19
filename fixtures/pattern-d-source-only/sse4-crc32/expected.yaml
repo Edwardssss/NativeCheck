@@ -1,6 +1,6 @@
-# 模式 D —— source-only：sse4_crc32 用 bindings + node-addon-api + node-gyp rebuild，
-# 无 node-gyp-build/prebuild-install → 必然源码编译（N-API，现代 Node 可干净编译）。
-# strategy 恒为 SOURCE_BUILD（环境无关）；risk 依赖工具链 → 不 pin。
+# Pattern D — source-only: sse4_crc32 builds with bindings + node-addon-api + node-gyp rebuild and
+# has no node-gyp-build / prebuild-install, so it always compiles (N-API, so modern Node is fine).
+# strategy is always SOURCE_BUILD (environment-independent); risk depends on the toolchain → not pinned.
 pattern: SourceOnly
 strategy: SOURCE_BUILD
 native: true

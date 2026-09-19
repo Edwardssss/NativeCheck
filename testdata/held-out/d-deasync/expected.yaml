@@ -4,12 +4,12 @@
 # signal → SourceOnly. strategy is SOURCE_BUILD; risk is NOT pinned here (it
 # depends on the local toolchain, per the fixtures/ Pattern D convention).
 #
-# 注意（2026-09-05）：deasync 的 install 是 `node ./build.js`，会先检查 tarball
-# 自带的 `bin/{plat}-{arch}-node-{v}/deasync.node` 预编译产物，命中则不编译
-# （bundled-prebuilt-first，见 known-blindspots §1.5）。L1 只看 lockfile 的
-# bindings+node-addon-api+hasInstallScript，无法看到脚本体 → 判 SourceOnly 是
-# L1 的正确输出；但这意味着 deasync 的「真编译 vs 免编」在 L1 层不可分辨。
-pattern: SourceOnly
+# Note (2026-09-05): deasync installs with `node ./build.js`, which first looks for the
+# `bin/{plat}-{arch}-node-{v}/deasync.node` prebuilt binary bundled in its own tarball and
+# skips the build when it is there (bundled-prebuilt-first, see known-blindspots §1.5). L1 only
+# sees bindings + node-addon-api + hasInstallScript in the lockfile and cannot read the script
+# body, so SourceOnly is the correct L1 output. It also means deasync's "really compiled or
+# not" cannot be told apart at L1 — which is a limit of the signal, not of the classifier.
 strategy: SOURCE_BUILD
 native: true
 network_calls: 0

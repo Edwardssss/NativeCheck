@@ -15,10 +15,10 @@ What is this machine missing?
 
 Requires **Node.js ≥ 20.17**. Run it with `npx`, or install it globally:
 
-| Method                | Command                      |
-| --------------------- | ---------------------------- |
-| No install (recommended) | `npx nativecheck .`       |
-| Global                | `npm install -g nativecheck` |
+| Method                   | Command                      |
+| ------------------------ | ---------------------------- |
+| No install (recommended) | `npx nativecheck .`          |
+| Global                   | `npm install -g nativecheck` |
 
 ```console
 $ nativecheck env          # environment check-up (optional, standalone)
@@ -60,16 +60,16 @@ are reported separately and never counted as candidates.
 
 ### Commands
 
-| Command                            | What it does                                                   |
-| ---------------------------------- | -------------------------------------------------------------- |
-| `nativecheck .`                    | Default `--fast`: read the lockfile, zero network, instant      |
-| `nativecheck . --deep`             | Fetch remote artifacts to verify patterns B / C (cached 7 days) |
-| `nativecheck . --deep --no-cache`  | Deep scan without reading or writing the forensics cache        |
-| `nativecheck . --json`             | Machine-readable output (zod-validated)                         |
-| `nativecheck . --ci`               | CI mode: **non-zero exit** on a blocker or a HIGH risk           |
-| `nativecheck env`                  | Environment check-up: OS / Node / Python / compiler / system libs |
-| `nativecheck target <pkg>[@version]` | Diagnose one package without a lockfile                       |
-| `nativecheck explain <pkg>`        | Evidence chain for one native candidate in this project         |
+| Command                              | What it does                                                      |
+| ------------------------------------ | ----------------------------------------------------------------- |
+| `nativecheck .`                      | Default `--fast`: read the lockfile, zero network, instant        |
+| `nativecheck . --deep`               | Fetch remote artifacts to verify patterns B / C (cached 7 days)   |
+| `nativecheck . --deep --no-cache`    | Deep scan without reading or writing the forensics cache          |
+| `nativecheck . --json`               | Machine-readable output (zod-validated)                           |
+| `nativecheck . --ci`                 | CI mode: **non-zero exit** on a blocker or a HIGH risk            |
+| `nativecheck env`                    | Environment check-up: OS / Node / Python / compiler / system libs |
+| `nativecheck target <pkg>[@version]` | Diagnose one package without a lockfile                           |
+| `nativecheck explain <pkg>`          | Evidence chain for one native candidate in this project           |
 
 Exit codes: `0` success · `1` bad arguments, or (with `--ci`) a blocker / HIGH
 risk · `2` unsupported lockfile format, reported on detection regardless of `--ci`.
@@ -120,12 +120,12 @@ Layer 4  Match     compare against the environment → strategy + evidence + rel
 
 ### The four distribution patterns
 
-| Pattern                          | Mechanism                                              | Examples                     | Detectable offline                  |
-| -------------------------------- | ------------------------------------------------------ | ---------------------------- | ----------------------------------- |
-| **A** platform optional deps     | main package + `os`/`cpu`-constrained binary packages  | esbuild, sharp, swc, rollup  | ✅ 100% (including sub-package match) |
-| **B** prebuildify                | prebuilt artifacts inside the package's own tarball    | better-sqlite3 ≥13, bcrypt 6 | ⚠️ "is native" yes, artifacts no     |
-| **C** fetch at install           | `prebuild-install` / `node-pre-gyp` from GitHub Releases | canvas, sqlite3             | ⚠️ needs one HEAD request            |
-| **D** source only                | `binding.gyp` + sources, nothing else                  | node-sass, posix             | ✅                                   |
+| Pattern                      | Mechanism                                                | Examples                     | Detectable offline                    |
+| ---------------------------- | -------------------------------------------------------- | ---------------------------- | ------------------------------------- |
+| **A** platform optional deps | main package + `os`/`cpu`-constrained binary packages    | esbuild, sharp, swc, rollup  | ✅ 100% (including sub-package match) |
+| **B** prebuildify            | prebuilt artifacts inside the package's own tarball      | better-sqlite3 ≥13, bcrypt 6 | ⚠️ "is native" yes, artifacts no      |
+| **C** fetch at install       | `prebuild-install` / `node-pre-gyp` from GitHub Releases | canvas, sqlite3              | ⚠️ needs one HEAD request             |
+| **D** source only            | `binding.gyp` + sources, nothing else                    | node-sass, posix             | ✅                                    |
 
 ### Reliability labels
 
@@ -147,14 +147,14 @@ containers, with compiler wrappers deciding whether a local compile actually
 happened (C / C++ must go through `cc` / `g++` to produce a `.node`, which is more
 reliable than scraping logs).
 
-| Metric                                                                        | Result                                                          |
-| ----------------------------------------------------------------------------- | --------------------------------------------------------------- |
-| Platform matrix                                                               | Linux glibc + musl × Node 20 / 22 / 24, six cells, full runs      |
-| Full matrix (68 installable fixtures × 6 environments ≈ 408 real installs)     | L2 FN 0.00%, FP 3.08%, deterministic coverage 98.2%              |
-| L1 native detection                                                           | covered by unit tests over fixtures (66 native) + held-out (40)  |
-| Automated tests                                                               | 371 cases across 21 files (vitest)                                |
-| Generalization                                                                | 40 real packages held out from the benchmark set                 |
-| Windows                                                                        | native cells in `testdata/ground-truth/windows/` (see its README) |
+| Metric                                                                     | Result                                                            |
+| -------------------------------------------------------------------------- | ----------------------------------------------------------------- |
+| Platform matrix                                                            | Linux glibc + musl × Node 20 / 22 / 24, six cells, full runs      |
+| Full matrix (68 installable fixtures × 6 environments ≈ 408 real installs) | L2 FN 0.00%, FP 3.08%, deterministic coverage 98.2%               |
+| L1 native detection                                                        | covered by unit tests over fixtures (66 native) + held-out (40)   |
+| Automated tests                                                            | 371 cases across 21 files (vitest)                                |
+| Generalization                                                             | 40 real packages held out from the benchmark set                  |
+| Windows                                                                    | native cells in `testdata/ground-truth/windows/` (see its README) |
 
 > `fixtures/` holds 72 samples (66 native + 2 non-native controls + 4 format
 > controls). The 4 format controls (lockfile v1 and malformed pnpm / yarn / bun)
