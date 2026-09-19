@@ -94,6 +94,39 @@ describe('parsePnpmLockfile', () => {
     expect(scoped?.version).toBe('2.4.1')
   })
 
+  it('peer 后缀的快照键不会污染 name / version', () => {
+    // 真实 pnpm v6+ 锁文件里，任何带 peer 的包都以 `name@version(peer@version)` 为键。
+    // 先按最后一个 @ 切分会得到 name=`react-dom@18.2.0(react`、version=`18.2.0)`。
+    const PEER = `lockfileVersion: '9.0'
+
+packages:
+
+  react-dom@18.2.0:
+    resolution: {integrity: sha512-dom}
+
+  '@scope/pkg@1.2.3':
+    resolution: {integrity: sha512-scoped}
+
+snapshots:
+
+  react-dom@18.2.0(react@18.2.0):
+    dependencies:
+      scheduler: 0.23.0
+
+  '@scope/pkg@1.2.3(peer@1.0.0)':
+    dependencies:
+      lodash: 4.17.21
+`
+    const list = parsePnpmLockfile(PEER)
+    expect(list.map((p) => `${p.name}@${p.version}`).sort()).toEqual([
+      '@scope/pkg@1.2.3',
+      'react-dom@18.2.0',
+    ])
+    expect(list.find((p) => p.name === 'react-dom')?.dependencies?.scheduler).toEqual({
+      name: 'scheduler',
+    })
+  })
+
   it('空 / 畸形 YAML → 空列表（Fail Closed）', () => {
     expect(parsePnpmLockfile('')).toEqual([])
     expect(parsePnpmLockfile('lockfileVersion: [unclosed')).toEqual([])
