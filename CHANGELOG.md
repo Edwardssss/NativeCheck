@@ -15,6 +15,11 @@ are the parts meant to be depended on. Adapter internals live behind
   warning. Node 20 remains supported.
 - Development toolchain: `eslint` / `@eslint/js` 10, `@types/node` 26,
   `js-yaml` 5 (which ships its own types, so `@types/js-yaml` is gone).
+- The advisory step no longer fails on an npm outage. npm's audit endpoint
+  answered 503 for maintenance on 2026-09-19, which turned a third party's
+  problem into a red build and a blocked release; an unreachable service now
+  warns and passes after a bounded retry, while advisories at or above `high`
+  still fail (`test/audit-script.test.ts` pins both halves).
 - Nothing is published yet: `0.1.0` below is waiting for the tag that publishes
   it (see [Releasing](./CONTRIBUTING.md#releasing)).
 
