@@ -38,7 +38,7 @@ bash testdata/ground-truth/run-matrix.sh 22 glibc
 bash testdata/ground-truth/repredict.sh          # all six cells
 bash testdata/ground-truth/repredict.sh 22 glibc # a single cell
 
-# Aggregate an existing out/
+# Aggregate an existing out/ (add --gate to enforce the caps, --blockers for L3)
 python3 testdata/ground-truth/collect.py testdata/ground-truth/out
 ```
 
@@ -85,9 +85,10 @@ libc:   debian (glibc) / alpine (musl)
 Target: linux-x64 / linux-arm64     (darwin / win32 run on GitHub Actions runners)
 ```
 
-`.github/workflows/ground-truth.yml` runs this weekly (plus on demand): the full
-glibc / musl matrix on an ubuntu runner, aggregating in-cell predictions into the
-four-square table with a 5% FN gate.
+`.github/workflows/ground-truth.yml` runs the full glibc / musl matrix weekly (plus
+on demand) on an ubuntu runner, and one glibc cell on every pull request that can
+move accuracy (`src/**`, `fixtures/**`, this directory). Both end in the same
+gate.
 
 ## Metrics by layer
 
@@ -99,10 +100,25 @@ four-square table with a 5% FN gate.
 
 ## Continuous regression
 
-The weekly matrix installs for real, compares `nativecheck --deep` predictions
-against what happened, and builds the four-square table. Accuracy dropping past
-the threshold (FN > 5%) fails the job, and new FP / FN cases are kept as
-regression fixtures.
+The matrix installs for real, compares `nativecheck --deep` predictions against
+what happened, and builds the four-square table. The gate is the collector's **exit
+code**, so the numbers in the top-level README are the ones the build enforces:
+
+```bash
+python3 testdata/ground-truth/collect.py testdata/ground-truth/out --gate --blockers
+```
+
+| Cap             | Default | Why                                                    |
+| --------------- | ------- | ------------------------------------------------------ |
+| `--max-fn-pct`  | `0`     | A false negative is the error the tool exists to avoid |
+| `--max-fp-pct`  | `5`     | False alarms are noise a user learns to ignore         |
+| `--min-samples` | `20`    | A run that measured nothing must fail, not report 0%   |
+
+Widen a cap on the command line when a cell legitimately differs
+(`--max-fp-pct 10`). Changing a default to get a red build green moves the claim
+instead of the code, and the README number would have to move with it. New FP / FN
+cases are kept as regression fixtures, and `test/ground-truth-gate.test.ts` pins
+this contract.
 
 ## Known measurement noise
 

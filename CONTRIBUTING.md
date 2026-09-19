@@ -74,6 +74,10 @@ addon cannot become a `.node` without going through a compiler, which makes this
 more reliable than scraping build logs. See
 [`testdata/ground-truth/README.md`](./testdata/ground-truth/README.md).
 
+Accuracy is gated, not just reported: the matrix cell ends in `collect.py --gate`
+(FN 0%, FP 5%, minimum sample count), and a pull request touching `src/**` or
+`fixtures/**` runs one glibc cell before merge rather than the following Monday.
+
 ## Code style
 
 - TypeScript with `strict` and `noUncheckedIndexedAccess` enabled

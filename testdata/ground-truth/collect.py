@@ -33,6 +33,7 @@ from __future__ import annotations
 import argparse
 import glob
 import json
+import math
 import os
 import sys
 
@@ -91,6 +92,29 @@ def main() -> int:
         "--blockers",
         action="store_true",
         help="also report L3 blocker statistics (needs a blocker count in the prediction; non-zero = blockers predicted)",
+    )
+    p.add_argument(
+        "--gate",
+        action="store_true",
+        help="exit non-zero when the four-square table misses a cap (see --max-fn-pct / --max-fp-pct / --min-samples)",
+    )
+    p.add_argument(
+        "--max-fn-pct",
+        type=float,
+        default=0.0,
+        help="cap on the L2 false-negative rate, in percent (default 0: a false negative is the error class the tool exists to avoid)",
+    )
+    p.add_argument(
+        "--max-fp-pct",
+        type=float,
+        default=5.0,
+        help="cap on the L2 false-alarm rate, in percent (default 5)",
+    )
+    p.add_argument(
+        "--min-samples",
+        type=int,
+        default=20,
+        help="fail when fewer samples reach the four-square table, so a run that measured nothing cannot pass (default 20)",
     )
     args = p.parse_args()
 
@@ -240,7 +264,31 @@ def main() -> int:
     else:
         print("\nhint: pass --blockers to see the L3 blocker statistics.")
 
-        print(f"\ntotals compiled_yes={grand['yes']} compiled_no={grand['no']} install_failed={grand['failed']}")
+    print(f"\ntotals compiled_yes={grand['yes']} compiled_no={grand['no']} install_failed={grand['failed']}")
+
+    # ---- gate ----------------
+    # The rates above are the published claim (see README "Accuracy and testing"),
+    # so they are enforced here rather than scraped from stdout by a shell
+    # pipeline: an empty or broken run must fail instead of reporting 0%.
+    if not args.gate:
+        return 0
+    samples = tp + fp + fn + tn
+    failures: list[str] = []
+    if samples < args.min_samples:
+        failures.append(
+            f"only {samples} samples reached the four-square table (minimum {args.min_samples}):"
+            " a run that measured nothing must not pass"
+        )
+    if not math.isnan(fn_rate) and fn_rate * 100 > args.max_fn_pct:
+        failures.append(f"L2 FN rate {fn_rate:.2%} exceeds the {args.max_fn_pct:g}% cap")
+    if not math.isnan(fp_rate) and fp_rate * 100 > args.max_fp_pct:
+        failures.append(f"L2 FP rate {fp_rate:.2%} exceeds the {args.max_fp_pct:g}% cap")
+    if failures:
+        print("\n=== accuracy gate: FAILED ===")
+        for failure in failures:
+            print(f"  - {failure}")
+        return 1
+    print(f"\n=== accuracy gate: passed (samples={samples}, FN={fn_rate:.2%}, FP={fp_rate:.2%}) ===")
     return 0
 
 
