@@ -1,0 +1,59 @@
+name: dependabot auto-merge
+
+# Dependabot opens one PR per update. The ones the checks already cover can merge
+# themselves instead of sitting on the pull-request page waiting for a click.
+#
+# Two repository settings are prerequisites and neither is visible from here:
+#
+#   - Settings → General → Pull requests: **Allow auto-merge** must be checked,
+#     otherwise `gh pr merge --auto` fails with "Auto merge is not allowed".
+#   - A branch protection rule on the default branch that requires the CI checks.
+#     Without required checks there is nothing to wait for, and auto-merge merges
+#     immediately — i.e. without CI.
+#
+# Majors are deliberately left alone: those are the updates that change
+# behaviour, and the Dependabot config groups them into one PR per ecosystem so
+# reviewing them stays a decision rather than a queue.
+
+on: pull_request
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  auto-merge:
+    if: github.actor == 'dependabot[bot]'
+    runs-on: ubuntu-latest
+    env:
+      PR_URL: ${{ github.event.pull_request.html_url }}
+      GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      # Optional: see the approval step below. Empty unless configured.
+      DEPENDABOT_PAT: ${{ secrets.DEPENDABOT_PAT }}
+    steps:
+      - name: Read the update metadata
+        id: metadata
+        uses: dependabot/fetch-metadata@v2
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+
+      # Patch updates of anything, and minor updates of dev-only tooling: the test
+      # suite, the fixture expectations and the accuracy gate all cover them, and
+      # they are the bulk of the noise.
+      - name: Enable auto-merge
+        if: steps.metadata.outputs.update-type == 'version-update:semver-patch' || (steps.metadata.outputs.update-type == 'version-update:semver-minor' && steps.metadata.outputs.dependency-type == 'direct:development')
+        run: gh pr merge --auto --squash "$PR_URL"
+
+      # Only needed when the branch protection rule demands a review: an app's
+      # review (the GITHUB_TOKEN) does not satisfy it, so a PAT has to do it.
+      # The PAT goes in Settings → Secrets and variables → **Dependabot**, because
+      # repository secrets are not exposed to Dependabot-triggered runs.
+      - name: Approve (only when a PAT is configured)
+        if: env.DEPENDABOT_PAT != '' && steps.metadata.outputs.update-type != 'version-update:semver-major'
+        run: gh pr review --approve "$PR_URL"
+        env:
+          GH_TOKEN: ${{ env.DEPENDABOT_PAT }}
+
+      - name: Say why a major was left for a human
+        if: steps.metadata.outputs.update-type == 'version-update:semver-major'
+        run: echo "::notice::${{ steps.metadata.outputs.dependency-names }} is a major update — left for review on purpose."
