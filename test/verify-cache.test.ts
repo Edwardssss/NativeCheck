@@ -156,7 +156,7 @@ describe('loadVerifyCache / saveVerifyCache round trip', () => {
     ).resolves.toBeUndefined() // a failed write stays silent, the main path is unaffected
   })
 
-  it('writes through \"temp file + rename\" so the target never holds half a cache', async () => {
+  it('writes through "temp file + rename" so the target never holds half a cache', async () => {
     const { fs, writes, disk } = memFs(1_000)
     const path = '/x/verify.json'
     await saveVerifyCache(path, [{ key: 'a', outcome: outcome(), fetchedAt: 1_000 }], fs)
