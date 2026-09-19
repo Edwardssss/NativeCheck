@@ -7,6 +7,9 @@ npm install
 npm run typecheck && npm test
 ```
 
+`npm run test:coverage` runs the same suite with the coverage floors in
+`vitest.config.ts` — that is what CI runs instead of `npm test`.
+
 Node **>= 20.17** is required (`@npmcli/arborist@9`).
 
 `.npmrc` sets `engine-strict=true`, so one dependency that wants a newer Node
