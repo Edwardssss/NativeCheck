@@ -4,6 +4,7 @@ export default defineConfig({
   entry: {
     cli: 'src/cli/index.ts',
     index: 'src/index.ts',
+    experimental: 'src/experimental.ts',
   },
   format: ['esm'],
   target: 'node20',
