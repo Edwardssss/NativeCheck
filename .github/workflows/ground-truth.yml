@@ -71,7 +71,7 @@ jobs:
         run: python3 testdata/ground-truth/collect.py testdata/ground-truth/out --blockers --gate
 
       - name: Upload artifacts
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         if: always()
         with:
           name: ground-truth-${{ matrix.cell.node }}-${{ matrix.cell.libc }}
@@ -104,7 +104,7 @@ jobs:
         run: python3 testdata/ground-truth/collect.py testdata/ground-truth/out --blockers --gate
 
       - name: Upload artifacts
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         if: always()
         with:
           name: ground-truth-pr-cell
