@@ -176,6 +176,11 @@ export function renderEnvironment(env: Environment): string {
       }`,
       `    C probe  ${env.compiler.cProbe ? '✓ compiles' : '✗ failed'}`,
       `    C++ probe ${env.compiler.cxxProbe ? '✓ compiles' : '✗ failed'}`,
+      // Windows: the toolchain often only works inside the VS developer
+      // environment. Saying so is what makes the result reproducible.
+      ...(env.compiler.viaToolchainEnv
+        ? [pc.dim(`    (via ${env.compiler.viaToolchainEnv})`)]
+        : []),
     )
   } else {
     lines.push(pc.yellow('  C/C++ compiler: not found'))

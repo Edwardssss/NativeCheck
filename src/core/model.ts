@@ -148,6 +148,17 @@ export interface CompilerInfo {
   readonly cProbe: boolean
   /** C++ compiler probe. */
   readonly cxxProbe: boolean
+  /**
+   * Set when the plain PATH probe failed and the compiler only became usable
+   * after entering a platform toolchain environment — currently Windows only,
+   * where `vcvars64.bat` is what supplies `INCLUDE` / `LIB`. The value is the
+   * script that was used.
+   *
+   * Worth carrying in the report: "this build works because we entered the VS
+   * developer environment" is a fact the reader needs in order to reproduce it,
+   * and it is invisible from the toolchain's own presence.
+   */
+  readonly viaToolchainEnv?: string
 }
 
 /**
