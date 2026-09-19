@@ -38,6 +38,23 @@ export interface LockfilePackage {
   readonly pathChains: readonly (readonly string[])[]
   /** Whether it is the project root (the consumer). The root is never a native candidate. */
   readonly isRoot?: boolean
+  /**
+   * Workspace members that declare this package, sorted by member name.
+   *
+   * `undefined` in an ordinary single-package project, and also when the
+   * dependency is declared by the root package only — see
+   * `workspacesDeclaring()`. Populated only for monorepos, so consumers can
+   * print it unconditionally.
+   */
+  readonly workspaces?: readonly string[]
+  /**
+   * Whether this node *is* a workspace member (the monorepo's own source).
+   *
+   * A member's own `install` script is a build step the user wrote, not a
+   * third-party download, so Layer 1 must not report it as a supply-chain
+   * candidate. Members are still walked: the packages they pull in are real.
+   */
+  readonly isWorkspaceMember?: boolean
 }
 
 /**

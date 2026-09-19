@@ -151,6 +151,7 @@ export const scanSummarySchema = z.object({
   byRisk: z.record(riskLevelSchema, z.number()),
   // Declared so zod does not strip it from `--json` (same discipline as allowScripts).
   platformExcluded: z.number().optional(),
+  workspaceMembers: z.array(z.string()).optional(),
   networkCalls: z.number(),
 })
 

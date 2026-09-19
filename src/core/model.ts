@@ -43,6 +43,15 @@ export interface PackageRef {
   readonly paths: readonly DependencyPath[]
   /** Raw lockfile fields, for evidence chain references and debugging. */
   readonly raw: Readonly<Record<string, unknown>>
+  /**
+   * Workspace members that declare this package, sorted (monorepos only).
+   *
+   * Absent in a single-package project, and absent when the root package is the
+   * declarer — "declared by the root" is the default and printing it on every
+   * finding would be noise. Absent therefore means "not attributable to a
+   * workspace", never "no one depends on it".
+   */
+  readonly workspaces?: readonly string[]
 }
 
 /**

@@ -101,6 +101,14 @@ export interface ScanSummary {
    * exactly those). Present only when non-zero, so old reports stay valid.
    */
   readonly platformExcluded?: number
+  /**
+   * Workspace members deliberately not reported as candidates (monorepos only).
+   *
+   * Listed by name rather than counted: "we skipped your own addon" is only
+   * useful if the reader can see *which* package that was. Absent in a
+   * single-package project, so old reports stay valid.
+   */
+  readonly workspaceMembers?: readonly string[]
   /** Must always be 0 under `--fast`. This assertion is the only reliable way to keep the default path fully offline. */
   readonly networkCalls: number
 }
@@ -129,6 +137,7 @@ export function summarize(
   totalPackages: number,
   networkCalls: number,
   platformExcluded = 0,
+  workspaceMembers: readonly string[] = [],
 ): ScanSummary {
   const byRisk: Record<RiskLevel, number> = {
     [RiskLevel.LOW]: 0,
@@ -146,5 +155,6 @@ export function summarize(
     byRisk,
     networkCalls,
     ...(platformExcluded > 0 ? { platformExcluded } : {}),
+    ...(workspaceMembers.length > 0 ? { workspaceMembers } : {}),
   }
 }
