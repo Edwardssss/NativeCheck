@@ -28,6 +28,8 @@ export interface TargetOptions {
   readonly env?: Environment
   /** Inject the HTTP transport (for tests); defaults to global fetch. */
   readonly fetchImpl?: HttpLike
+  /** Proxy URL for the manifest / forensics requests (see `ScanOptions.proxy`). */
+  readonly proxy?: string
 }
 
 /** A parsed `<name>[@version]` spec. Scoped packages (`@scope/name[@version]`) are supported. */
@@ -86,7 +88,7 @@ function profileToPackage(profile: PackageProfile): LockfilePackage {
 export async function scanTarget(spec: string, options: TargetOptions = {}): Promise<ScanReport> {
   const started = Date.now()
   const env = options.env ?? scanEnvironment()
-  const fetchImpl = options.fetchImpl ?? defaultFetch()
+  const fetchImpl = options.fetchImpl ?? defaultFetch(options.proxy)
   const mode = options.deep ? 'deep' : 'fast'
   const { name, version = 'latest' } = parsePackageSpec(spec)
 

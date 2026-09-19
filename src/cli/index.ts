@@ -45,6 +45,11 @@ const SCAN_ARGS = {
     description:
       'on-disk forensics cache for --deep (--no-cache disables it; a hit costs no network)',
   },
+  proxy: {
+    type: 'string' as const,
+    description:
+      'HTTP proxy for forensics requests (defaults to HTTPS_PROXY / HTTP_PROXY / ALL_PROXY / NC_PROXY)',
+  },
 }
 
 const HELP = `${pc.bold('nativecheck')} — ${pc.dim('local-first native dependency compatibility diagnostics')}
@@ -59,7 +64,7 @@ Usage:
 
 async function runScan(
   dir: string,
-  flags: { deep?: boolean; json?: boolean; ci?: boolean; cache?: boolean },
+  flags: { deep?: boolean; json?: boolean; ci?: boolean; cache?: boolean; proxy?: string },
 ): Promise<void> {
   const projectRoot = resolve(dir || '.')
   const { scan } = await import('../adapters/node/pipeline')
@@ -67,6 +72,7 @@ async function runScan(
     mode: flags.deep ? 'deep' : 'fast',
     // --no-cache → cache:false → explicitly disable the disk cache; fast mode never writes anyway.
     cachePath: flags.cache === false ? null : undefined,
+    ...(flags.proxy ? { proxy: flags.proxy } : {}),
   })
 
   if (flags.json) {
@@ -115,7 +121,7 @@ async function runExplain(query: string): Promise<void> {
 /** Single-package debug mode: no lockfile / Docker needed, classifies one package live. */
 async function runTarget(
   query: string | undefined,
-  flags: { deep?: boolean; json?: boolean },
+  flags: { deep?: boolean; json?: boolean; proxy?: string },
 ): Promise<void> {
   if (!query) {
     console.log(`${pc.yellow('Usage:')} nativecheck target <pkg>[@version] [--deep] [--json]`)
@@ -123,7 +129,10 @@ async function runTarget(
     return
   }
   const { scanTarget } = await import('../adapters/node/target')
-  const report = await scanTarget(query, { deep: flags.deep })
+  const report = await scanTarget(query, {
+    deep: flags.deep,
+    ...(flags.proxy ? { proxy: flags.proxy } : {}),
+  })
   if (flags.json) {
     const { scanReportSchema } = await import('../core/schema')
     console.log(JSON.stringify(scanReportSchema.parse(report), null, 2))
@@ -133,13 +142,36 @@ async function runTarget(
 }
 
 /** Flags the scan path understands; anything else is a typo, not a feature. */
-const SCAN_FLAGS = new Set(['--deep', '--json', '--ci', '--cache', '--no-cache', '--help', '-h'])
-const TARGET_FLAGS = new Set(['--deep', '--json', '--help', '-h'])
+const SCAN_FLAGS = new Set([
+  '--deep',
+  '--json',
+  '--ci',
+  '--cache',
+  '--no-cache',
+  '--proxy',
+  '--help',
+  '-h',
+])
+const TARGET_FLAGS = new Set(['--deep', '--json', '--proxy', '--help', '-h'])
 
 /** Unknown `--flags` — citty silently collects them as extra booleans, so a typo
  * like `--depp` would just do nothing. Reject them explicitly instead. */
 function unknownFlags(argv: readonly string[], known: ReadonlySet<string>): string[] {
-  return argv.filter((arg) => arg.startsWith('-') && !known.has(arg))
+  return argv.filter((arg) => {
+    if (!arg.startsWith('-')) return false
+    // `--proxy=https://…` is the same flag as `--proxy https://…`
+    return !known.has(arg.split('=')[0] ?? arg)
+  })
+}
+
+/** Value of `--name <value>` or `--name=<value>`, without pulling in a parser. */
+function flagValue(argv: readonly string[], name: string): string | undefined {
+  for (let i = 0; i < argv.length; i++) {
+    const arg = argv[i] ?? ''
+    if (arg === name) return argv[i + 1]
+    if (arg.startsWith(`${name}=`)) return arg.slice(name.length + 1)
+  }
+  return undefined
 }
 
 /** Top-level dispatch. Returns true when handled; false means "show help". */
@@ -172,6 +204,7 @@ async function dispatch(argv: readonly string[]): Promise<boolean> {
     await runTarget(query, {
       deep: rest.includes('--deep'),
       json: rest.includes('--json'),
+      ...(flagValue(rest, '--proxy') ? { proxy: flagValue(rest, '--proxy') as string } : {}),
     })
     return true
   }
@@ -192,6 +225,7 @@ async function dispatch(argv: readonly string[]): Promise<boolean> {
     json: Boolean(parsed.json),
     ci: Boolean(parsed.ci),
     cache: parsed.cache !== false, // citty normalizes --no-cache into cache:false
+    ...(typeof parsed.proxy === 'string' && parsed.proxy ? { proxy: parsed.proxy } : {}),
   })
   return true
 }

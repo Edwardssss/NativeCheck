@@ -44,6 +44,12 @@ export interface ScanOptions {
   readonly cacheFs?: VerifyCacheFs
   /** Forensics cache TTL (ms). Defaults to 7 days. */
   readonly cacheTtlMs?: number
+  /**
+   * Proxy URL for the `--deep` requests. Defaults to the standard environment
+   * variables (`HTTPS_PROXY` / `HTTP_PROXY` / `ALL_PROXY` / `NC_PROXY`), which
+   * Node's global fetch does not read on its own.
+   */
+  readonly proxy?: string
 }
 
 /** Cache context for buildFindings: null means "do not persist, run forensics live each time" (used by tests to disable caching). */
@@ -75,7 +81,7 @@ export async function scan(projectRoot: string, options: ScanOptions = {}): Prom
   const cache: FindingCache = buildFindingCache(projectRoot, options, mode)
   const { findings, networkCalls } = await buildFindings(classification.candidates, env, {
     deep: mode === 'deep',
-    fetchImpl: options.fetchImpl ?? defaultFetch(),
+    fetchImpl: options.fetchImpl ?? defaultFetch(options.proxy),
     cache,
   })
 
