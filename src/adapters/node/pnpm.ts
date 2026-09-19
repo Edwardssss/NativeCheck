@@ -38,11 +38,21 @@ interface PnpmLock {
   snapshots?: Record<string, PnpmSnapshot>
 }
 
-/** Split a `name@version` / `@scope/name@version` key at the last `@`. */
+/**
+ * Split a `name@version` / `@scope/name@version` key at the last `@`.
+ *
+ * Snapshot keys carry a **peer suffix** — `react-dom@18.2.0(react@18.2.0)` — and
+ * since that suffix contains its own `@`, splitting first would yield
+ * name `react-dom@18.2.0(react` / version `18.2.0)`. Every peer-resolved package
+ * (i.e. most of a real pnpm project) came out with a corrupted name, which
+ * poisons the report, `packageKey` de-duplication and the name→library hints.
+ * The suffix is metadata about the resolution, not part of the identity.
+ */
 function parseNameVersion(key: string): { name: string; version: string } {
-  const at = key.lastIndexOf('@')
-  if (at <= 0) return { name: key, version: 'unknown' }
-  return { name: key.slice(0, at), version: key.slice(at + 1) }
+  const bare = key.replace(/\(.*\)$/, '')
+  const at = bare.lastIndexOf('@')
+  if (at <= 0) return { name: bare, version: 'unknown' }
+  return { name: bare.slice(0, at), version: bare.slice(at + 1) }
 }
 
 /**

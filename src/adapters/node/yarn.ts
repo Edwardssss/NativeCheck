@@ -79,7 +79,12 @@ function parseNameVersion(key: string): { name: string; version: string } | null
     return null
   const source = rawVersion.split(':')[0] ?? ''
   if (rawVersion.includes(':') && source !== 'npm' && source !== 'yarn') return null
-  return { name: rawName, version: rawVersion }
+  // Berry alias: `"foo@npm:bar@^1.0.0"` installs the package `bar` under the
+  // alias `foo`. The entry describes `bar` (its tarball, its build tooling), so
+  // the alias wrapper has to go — otherwise the name is `foo@npm:bar` and every
+  // name-based lookup (rules, platform hints) misses.
+  const alias = /@npm:([^@]+)$/.exec(rawName)
+  return { name: alias?.[1] ?? rawName, version: rawVersion }
 }
 
 /**
