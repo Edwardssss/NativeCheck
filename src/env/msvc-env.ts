@@ -26,10 +26,21 @@
  */
 import { execFileSync, execSync } from 'node:child_process'
 import { existsSync } from 'node:fs'
-import { join } from 'node:path'
+import { win32 } from 'node:path'
+
+/**
+ * Windows paths are built with `win32` semantics on purpose: they name files on
+ * a Windows machine even when the probe itself runs elsewhere (a Linux CI runner,
+ * or a test that injects `platform: 'win32'`). Joining them with host semantics
+ * would produce `/` separators that no Windows tool accepts.
+ */
 
 /** Where `vswhere.exe` lives on a machine that has any Visual Studio or Build Tools installed. */
-export const VSWHERE_RELATIVE_PATH = join('Microsoft Visual Studio', 'Installer', 'vswhere.exe')
+export const VSWHERE_RELATIVE_PATH = win32.join(
+  'Microsoft Visual Studio',
+  'Installer',
+  'vswhere.exe',
+)
 
 /** The MSVC x64 toolset component; without it vcvars64.bat is not installed either. */
 export const MSVC_X64_COMPONENT = 'Microsoft.VisualStudio.Component.VC.Tools.x86.x64'
@@ -101,7 +112,7 @@ export function findVcvarsScript(deps: MsvcEnvDeps = {}): string | undefined {
     (root): root is string => typeof root === 'string' && root.length > 0,
   )
   const vswhere = roots
-    .map((root) => join(root, VSWHERE_RELATIVE_PATH))
+    .map((root) => win32.join(root, VSWHERE_RELATIVE_PATH))
     .find((candidate) => exists(candidate))
   if (!vswhere) return undefined
 
@@ -123,7 +134,7 @@ export function findVcvarsScript(deps: MsvcEnvDeps = {}): string | undefined {
     .find(Boolean)
   if (!installPath) return undefined
 
-  const script = join(installPath, 'VC', 'Auxiliary', 'Build', 'vcvars64.bat')
+  const script = win32.join(installPath, 'VC', 'Auxiliary', 'Build', 'vcvars64.bat')
   return exists(script) ? script : undefined
 }
 
