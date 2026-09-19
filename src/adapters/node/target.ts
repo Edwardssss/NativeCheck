@@ -43,7 +43,7 @@ export interface ParsedSpec {
  */
 export function parsePackageSpec(spec: string): ParsedSpec {
   const trimmed = spec.trim()
-  if (!trimmed) throw new Error('包名不能为空')
+  if (!trimmed) throw new Error('package name must not be empty')
   const atIndex = trimmed.lastIndexOf('@')
   if (atIndex > 0) {
     const name = trimmed.slice(0, atIndex)

@@ -83,7 +83,7 @@ describe('matchCandidate', () => {
       env: noCompiler,
     })
     expect(finding.risk).toBe(RiskLevel.HIGH)
-    expect(finding.blockers.some((b) => b.name === 'C/C++ 编译器')).toBe(true)
+    expect(finding.blockers.some((b) => b.name === 'C/C++ compiler')).toBe(true)
   })
 
   it('SUSPICIOUS + 未定模式 → AMBIGUOUS（中性，非 LOW），带 resolveHint', () => {

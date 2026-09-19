@@ -57,7 +57,8 @@ describe('renderReport · unsupported', () => {
       },
       unsupported: {
         detected: 'bun.lock (text)',
-        reason: 'bun 文本 lockfile 结构不同，需单独适配（当前仅支持二进制 bun.lockb）',
+        reason:
+          'the text bun.lock has a different structure and needs its own adapter (only the binary bun.lockb is supported today)',
         supported: [...SUPPORTED_LOCKFILES],
       },
     })

@@ -66,9 +66,9 @@ export const MARKER: Record<Reliability, string> = {
 
 /** Localized labels (Chinese) for the HTML report and non-terminal rendering. */
 export const RELIABILITY_LABEL: Record<Reliability, string> = {
-  [Reliability.Replay]: '复刻型',
-  [Reliability.Inferred]: '推测型',
-  [Reliability.Unverified]: '未验证',
+  [Reliability.Replay]: 'replay',
+  [Reliability.Inferred]: 'inferred',
+  [Reliability.Unverified]: 'unverified',
 }
 
 /** Reliability ordering: used to take the *weakest* item as the aggregate annotation. */

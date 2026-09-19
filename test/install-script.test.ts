@@ -151,7 +151,7 @@ describe('inspectScript', () => {
 
 describe('describeIntent', () => {
   it('给每个意图一个可读标签', () => {
-    expect(describeIntent('compile')).toContain('编译')
-    expect(describeIntent('select')).toContain('挑选')
+    expect(describeIntent('compile')).toContain('compiles')
+    expect(describeIntent('select')).toContain('picks')
   })
 })

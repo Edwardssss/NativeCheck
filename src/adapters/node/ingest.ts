@@ -89,19 +89,20 @@ export function probeLockfile(projectRoot: string): {
     return {
       supported: false,
       detected: 'bun.lock (text)',
-      reason: 'bun 文本 lockfile 结构不同，需单独适配（当前仅支持二进制 bun.lockb）',
+      reason:
+        'the text bun.lock has a different structure and needs its own adapter (only the binary bun.lockb is supported today)',
     }
   }
   const version = lockfileVersion(projectRoot)
   if (version === undefined) {
-    return { supported: false, detected: 'unknown', reason: '未找到可解析的 package-lock.json' }
+    return { supported: false, detected: 'unknown', reason: 'no parseable package-lock.json found' }
   }
   if (version === 1) {
     return {
       supported: false,
       detected: `package-lock.json v1`,
       version,
-      reason: 'lockfile v1 结构不同，需单独适配',
+      reason: 'lockfile v1 has a different structure and needs its own adapter',
     }
   }
   return { supported: true, detected: 'npm (package-lock.json)', version }
@@ -216,7 +217,7 @@ export async function ingest(projectRoot: string): Promise<IngestOutcome> {
     return {
       ok: false,
       detected: probe.detected,
-      reason: probe.reason ?? '不支持的 lockfile 格式',
+      reason: probe.reason ?? 'unsupported lockfile format',
     }
   }
 
@@ -226,14 +227,18 @@ export async function ingest(projectRoot: string): Promise<IngestOutcome> {
       const content = readFileSync(join(projectRoot, 'pnpm-lock.yaml'), 'utf8')
       const list = parsePnpmLockfile(content)
       if (list.length === 0) {
-        return { ok: false, detected: 'pnpm-lock.yaml', reason: 'pnpm-lock.yaml 解析失败或为空' }
+        return {
+          ok: false,
+          detected: 'pnpm-lock.yaml',
+          reason: 'pnpm-lock.yaml could not be parsed, or is empty',
+        }
       }
       return { ok: true, graph: indexPackages(list), format: 'pnpm (pnpm-lock.yaml)' }
     } catch (error) {
       return {
         ok: false,
         detected: 'pnpm-lock.yaml',
-        reason: `pnpm-lock.yaml 解析失败：${error instanceof Error ? error.message : String(error)}`,
+        reason: `pnpm-lock.yaml parse failed: ${error instanceof Error ? error.message : String(error)}`,
       }
     }
   }
@@ -244,14 +249,18 @@ export async function ingest(projectRoot: string): Promise<IngestOutcome> {
       const content = readFileSync(join(projectRoot, 'yarn.lock'), 'utf8')
       const list = parseYarnLockfile(content)
       if (list.length === 0) {
-        return { ok: false, detected: 'yarn.lock', reason: 'yarn.lock 解析失败或为空' }
+        return {
+          ok: false,
+          detected: 'yarn.lock',
+          reason: 'yarn.lock could not be parsed, or is empty',
+        }
       }
       return { ok: true, graph: indexPackages(list), format: 'yarn (yarn.lock)' }
     } catch (error) {
       return {
         ok: false,
         detected: 'yarn.lock',
-        reason: `yarn.lock 解析失败：${error instanceof Error ? error.message : String(error)}`,
+        reason: `yarn.lock parse failed: ${error instanceof Error ? error.message : String(error)}`,
       }
     }
   }
@@ -262,14 +271,18 @@ export async function ingest(projectRoot: string): Promise<IngestOutcome> {
       const buf = readFileSync(join(projectRoot, 'bun.lockb'))
       const list = parseBunLockfile(buf)
       if (list.length === 0) {
-        return { ok: false, detected: 'bun.lockb', reason: 'bun.lockb 解析失败或为空' }
+        return {
+          ok: false,
+          detected: 'bun.lockb',
+          reason: 'bun.lockb could not be parsed, or is empty',
+        }
       }
       return { ok: true, graph: indexPackages(list), format: 'bun (bun.lockb)' }
     } catch (error) {
       return {
         ok: false,
         detected: 'bun.lockb',
-        reason: `bun.lockb 解析失败：${error instanceof Error ? error.message : String(error)}`,
+        reason: `bun.lockb parse failed: ${error instanceof Error ? error.message : String(error)}`,
       }
     }
   }
@@ -282,7 +295,7 @@ export async function ingest(projectRoot: string): Promise<IngestOutcome> {
     return {
       ok: false,
       detected: probe.detected,
-      reason: `lockfile 解析失败：${error instanceof Error ? error.message : String(error)}`,
+      reason: `lockfile parse failed: ${error instanceof Error ? error.message : String(error)}`,
     }
   }
 

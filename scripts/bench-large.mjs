@@ -69,6 +69,6 @@ const out = execFileSync(NODE, [CLI, root, '--json'], { encoding: 'utf8' })
 const wallMs = Date.now() - t0
 const r = JSON.parse(out)
 console.log(
-  `packages=${r.summary.totalPackages} nativeCandidates=${r.summary.nativeCandidates} networkCalls=${r.summary.networkCalls} wallMs=${wallMs} durationMs(内部)=${r.durationMs}`,
+  `packages=${r.summary.totalPackages} nativeCandidates=${r.summary.nativeCandidates} networkCalls=${r.summary.networkCalls} wallMs=${wallMs} durationMs(internal)=${r.durationMs}`,
 )
 rmSync(root, { recursive: true, force: true })

@@ -49,8 +49,10 @@ for (const [name, version, note] of CASES) {
     console.log(`${name}@${m.version}`)
     console.log(`  install:      ${s.install ?? '(none)'}`)
     console.log(`  postinstall: ${s.postinstall ?? '(none)'}`)
-    console.log(`  L1 依赖边信号: ${nativeDeps.length ? nativeDeps.join(', ') : '(无)'}`)
-    console.log(`  → parseInstallScript 输出: ${intent}    [已知行为: ${note}]`)
+    console.log(
+      `  L1 dependency-edge signal: ${nativeDeps.length ? nativeDeps.join(', ') : '(none)'}`,
+    )
+    console.log(`  -> parseInstallScript output: ${intent}    [known behaviour: ${note}]`)
     console.log('')
   } catch (e) {
     console.log(`✗ ${name}@${spec} ${e.message}`)

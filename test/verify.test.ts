@@ -457,7 +457,7 @@ describe('matchCandidate · 模式 B verify 折叠', () => {
       verify: { b: { status: 'absent', observed: [] }, networkCalls: 2 },
     })
     expect(f.risk).toBe(RiskLevel.HIGH)
-    expect(f.blockers.some((b) => b.name === 'C/C++ 编译器')).toBe(true)
+    expect(f.blockers.some((b) => b.name === 'C/C++ compiler')).toBe(true)
   })
   it('deep 取证触顶 unknown → 保持 UNVERIFIED（绝不当作缺失降级）', () => {
     const f = matchWith(bCand(), {
@@ -493,7 +493,7 @@ describe('matchCandidate · 模式 C verify 折叠', () => {
     })
     expect(f.risk).toBe(RiskLevel.LOW) // 主路径仍免编
     expect(f.fallback).toBeDefined()
-    expect(f.fallback?.blockers.map((b) => b.name)).toContain('C/C++ 编译器')
+    expect(f.fallback?.blockers.map((b) => b.name)).toContain('C/C++ compiler')
   })
   it('HEAD 404 → MEDIUM / SOURCE_BUILD', () => {
     const f = matchWith(cCand(), { remote: 'source-build', networkCalls: 1 })

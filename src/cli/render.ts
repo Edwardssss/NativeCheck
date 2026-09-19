@@ -25,7 +25,7 @@ export function renderSummary(report: ScanReport): string {
     `  ${summary.totalPackages} packages · ${summary.nativeCandidates} native candidates`,
     // Transparency: silently dropping packages would look like a miss.
     ...(summary.platformExcluded
-      ? [pc.dim(`  另有 ${summary.platformExcluded} 个可选包因平台不适用被跳过`)]
+      ? [pc.dim(`  ${summary.platformExcluded} optional packages skipped: platform not applicable`)]
       : []),
     '',
     pc.dim('Result'),
@@ -139,11 +139,11 @@ export function renderEnvironment(env: Environment): string {
       `  C/C++ ${env.compiler.name}${env.compiler.version ? ` ${env.compiler.version}` : ''}${
         env.compiler.path ? ` (${env.compiler.path})` : ''
       }`,
-      `    C probe  ${env.compiler.cProbe ? '✓ 可编译' : '✗ 失败'}`,
-      `    C++ probe ${env.compiler.cxxProbe ? '✓ 可编译' : '✗ 失败'}`,
+      `    C probe  ${env.compiler.cProbe ? '✓ compiles' : '✗ failed'}`,
+      `    C++ probe ${env.compiler.cxxProbe ? '✓ compiles' : '✗ failed'}`,
     )
   } else {
-    lines.push(pc.yellow('  C/C++ compiler: 未检测到'))
+    lines.push(pc.yellow('  C/C++ compiler: not found'))
   }
   return lines.join('\n')
 }

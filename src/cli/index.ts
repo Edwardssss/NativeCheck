@@ -32,26 +32,30 @@ import { summarize, type ScanReport } from '../core/report'
 
 /** Flag definitions for scan (citty, type-safe). */
 const SCAN_ARGS = {
-  dir: { type: 'positional' as const, description: '项目根目录（默认 .）' },
-  deep: { type: 'boolean' as const, description: '联网取证 B/C 模式预编译产物' },
-  json: { type: 'boolean' as const, description: '输出机器可读 JSON' },
-  ci: { type: 'boolean' as const, description: 'CI 模式：有阻塞/HIGH 风险时非零退出' },
+  dir: { type: 'positional' as const, description: 'project root directory (default: .)' },
+  deep: {
+    type: 'boolean' as const,
+    description: 'fetch remote artifacts to verify patterns B / C',
+  },
+  json: { type: 'boolean' as const, description: 'emit machine-readable JSON' },
+  ci: { type: 'boolean' as const, description: 'CI mode: exit non-zero on blockers or HIGH risk' },
   cache: {
     type: 'boolean' as const,
     default: true,
-    description: '--deep 取证磁盘缓存（--no-cache 关闭；命中零网络）',
+    description:
+      'on-disk forensics cache for --deep (--no-cache disables it; a hit costs no network)',
   },
 }
 
-const HELP = `${pc.bold('nativecheck')} — ${pc.dim('本地优先的 native 依赖兼容性诊断工具')}
+const HELP = `${pc.bold('nativecheck')} — ${pc.dim('local-first native dependency compatibility diagnostics')}
 
-用法:
-  nativecheck [dir] [--deep] [--json] [--ci]           扫描项目（默认 .）
-  nativecheck [dir] --deep --no-cache                  深扫但不写/不读取证缓存
-  nativecheck env                                      环境体检
-  nativecheck explain <pkg>                            单个 native 候选的证据链
-  nativecheck target <pkg>[@version] [--deep] [--json] 单包诊断（无需 lockfile / Docker）
-  nativecheck --help                                   显示帮助`
+Usage:
+  nativecheck [dir] [--deep] [--json] [--ci]           scan a project (default: .)
+  nativecheck [dir] --deep --no-cache                  deep scan without reading or writing the cache
+  nativecheck env                                      environment check-up
+  nativecheck explain <pkg>                            evidence chain for one native candidate
+  nativecheck target <pkg>[@version] [--deep] [--json] diagnose one package (no lockfile / Docker needed)
+  nativecheck --help                                   show this help`
 
 async function runScan(
   dir: string,
@@ -92,7 +96,9 @@ async function runExplain(query: string): Promise<void> {
   const bareName = query.split('@')[0]
   const hit = report.findings.find((f) => f.pkg.name === query || f.pkg.name === bareName)
   if (!hit) {
-    console.log(pc.yellow(`nativecheck explain: 在 ${projectRoot} 未找到 native 候选「${query}」`))
+    console.log(
+      pc.yellow(`nativecheck explain: no native candidate matching "${query}" in ${projectRoot}`),
+    )
     process.exitCode = 1
     return
   }
@@ -112,7 +118,7 @@ async function runTarget(
   flags: { deep?: boolean; json?: boolean },
 ): Promise<void> {
   if (!query) {
-    console.log(`${pc.yellow('用法:')} nativecheck target <pkg>[@version] [--deep] [--json]`)
+    console.log(`${pc.yellow('Usage:')} nativecheck target <pkg>[@version] [--deep] [--json]`)
     process.exitCode = 1
     return
   }
@@ -146,7 +152,7 @@ async function dispatch(argv: readonly string[]): Promise<boolean> {
   if (first === 'explain') {
     const query = argv[1]
     if (!query) {
-      console.log(`${pc.yellow('用法:')} nativecheck explain <pkg>`)
+      console.log(`${pc.yellow('Usage:')} nativecheck explain <pkg>`)
       process.exitCode = 1
       return true
     }
@@ -158,8 +164,8 @@ async function dispatch(argv: readonly string[]): Promise<boolean> {
     const rest = argv.slice(2)
     const bad = unknownFlags(rest, TARGET_FLAGS)
     if (bad.length > 0) {
-      console.log(`${pc.yellow('未知参数:')} ${bad.join(' ')}`)
-      console.log(`${pc.yellow('用法:')} nativecheck target <pkg>[@version] [--deep] [--json]`)
+      console.log(`${pc.yellow('unknown option:')} ${bad.join(' ')}`)
+      console.log(`${pc.yellow('Usage:')} nativecheck target <pkg>[@version] [--deep] [--json]`)
       process.exitCode = 1
       return true
     }
@@ -172,7 +178,7 @@ async function dispatch(argv: readonly string[]): Promise<boolean> {
   // Anything else (`.`, a directory, or a bare --flag) is treated as scan.
   const bad = unknownFlags(argv, SCAN_FLAGS)
   if (bad.length > 0) {
-    console.log(`${pc.yellow('未知参数:')} ${bad.join(' ')}`)
+    console.log(`${pc.yellow('unknown option:')} ${bad.join(' ')}`)
     console.log(HELP)
     process.exitCode = 1
     return true

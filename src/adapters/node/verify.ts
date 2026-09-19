@@ -82,17 +82,18 @@ function toolchainBlockers(env: Environment): Blocker[] {
   if (!env.python) {
     blockers.push({
       name: 'Python',
-      detail: '未检测到 python3 / python / py',
-      remedy: '安装 Python 3.6+ 并确保在 PATH 中',
+      detail: 'no python3 / python / py found',
+      remedy: 'install Python 3.6+ and make sure it is on PATH',
     })
   }
   if (!env.compiler || !env.compiler.cxxProbe) {
     blockers.push({
-      name: 'C/C++ 编译器',
+      name: 'C/C++ compiler',
       detail: env.compiler
-        ? `${env.compiler.name} 存在但 C++ 编译探针失败`
-        : '未检测到可用 C/C++ 编译器',
-      remedy: '安装编译器（macOS: Xcode CLT；Linux: build-essential；Windows: MSVC Build Tools）',
+        ? `${env.compiler.name} is present, but the C++ compile probe failed`
+        : 'no usable C/C++ compiler found',
+      remedy:
+        'install a compiler (macOS: Xcode CLT; Linux: build-essential; Windows: MSVC Build Tools)',
     })
   }
   return blockers

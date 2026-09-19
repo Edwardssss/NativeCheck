@@ -159,7 +159,7 @@ describe('matchCandidate · 必需依赖平台不匹配 = EBADPLATFORM 阻塞', 
     expect(finding.strategy).toBe(InstallStrategy.Unsupported)
     expect(finding.risk).toBe(RiskLevel.HIGH)
     expect(finding.reliability).toBe(Reliability.Replay)
-    expect(finding.blockers[0]?.name).toBe('平台不适用')
+    expect(finding.blockers[0]?.name).toBe('platform not applicable')
     expect(finding.blockers[0]?.detail).toContain('os=linux')
     expect(finding.evidence[0]?.kind).toBe('platform-constraint')
   })
@@ -210,7 +210,9 @@ describe('matchCandidate · 模式 A 用子包平台约束替代猜测', () => {
     })
     expect(finding.risk).toBe(RiskLevel.UNVERIFIED)
     expect(finding.resolveHint).toContain('package-lock-only')
-    const hint = finding.evidence.find((e) => e.description.includes('没有任何一个匹配'))
+    const hint = finding.evidence.find((e) =>
+      e.description.includes('none of the optional sub-packages'),
+    )
     expect(hint?.description).toContain('darwin-arm64')
   })
 
@@ -245,11 +247,11 @@ describe('renderSummary · 被跳过的包必须可见', () => {
   }
 
   it('静默丢包看起来就像漏报，所以摘要必须说明跳过了几个', () => {
-    expect(renderSummary(base)).not.toContain('平台不适用')
+    expect(renderSummary(base)).not.toContain('platform not applicable')
     const withExcluded: ScanReport = {
       ...base,
       summary: { ...base.summary, platformExcluded: 2 },
     }
-    expect(renderSummary(withExcluded)).toContain('2 个可选包因平台不适用')
+    expect(renderSummary(withExcluded)).toContain('2 optional packages skipped')
   })
 })

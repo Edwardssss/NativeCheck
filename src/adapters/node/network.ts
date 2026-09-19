@@ -539,7 +539,7 @@ export async function fetchManifest(
     }
   }
   const tarball = json?.dist?.tarball
-  if (!tarball) throw new Error(`registry manifest ${name}@${version}: 缺 dist.tarball`)
+  if (!tarball) throw new Error(`registry manifest ${name}@${version}: missing dist.tarball`)
   const scripts = json?.scripts ?? {}
   const hasInstallScript = Boolean(
     scripts.install?.trim() || scripts.preinstall?.trim() || scripts.postinstall?.trim(),
@@ -699,7 +699,7 @@ export async function probePrebuilds(
         // After a platform hit, ac.abort() makes the in-flight read() throw
         // AbortError — expected, just stop.
         if (matched) break
-        throw new Error('tarball 流读取中断')
+        throw new Error('tarball stream was interrupted')
       }
       if (chunk.done) {
         reachedEnd = true

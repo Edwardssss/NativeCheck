@@ -105,11 +105,11 @@ def main() -> int:
 
     cells = sorted(d for d in glob.glob(os.path.join(args.out_root, "*-*")) if os.path.isdir(d))
     if not cells:
-        print(f"在 {args.out_root} 未找到任何 cell（*-*）目录。先跑 run-matrix.sh。")
+        print(f"no cell (*-*) directory found under {args.out_root}. Run run-matrix.sh first.")
         return 1
 
     cell_preds = load_predictions(args.out_root)
-    print(f"Ground Truth 汇总 —— cells: {len(cells)}，cell 内预测文件: {len(cell_preds)}")
+    print(f"Ground Truth summary -- cells: {len(cells)}, in-cell prediction files: {len(cell_preds)}")
 
     def pred_for(cell: str, fixture: str) -> dict:
         row = cell_preds.get((cell, fixture)) or fallback.get(fixture, {})
@@ -188,21 +188,24 @@ def main() -> int:
                 if nb > 0:
                     l3_predict_block += 1
 
-        print(f"\n  [{name}] 实际编译 yes={stat['yes']} no={stat['no']} install-fail={stat['failed']}")
+        print(f"\n  [{name}] actual compile yes={stat['yes']} no={stat['no']} install-fail={stat['failed']}")
         print("      fixture                compiled install  predict(L2)  risk       src  blockers")
         for fixture, compiled, inst, pred_s, pred_risk, src_tag, nb in rows:
             print(f"      {fixture:<24} {compiled:<8} {inst:<7} {pred_s:<12} {pred_risk:<10} {src_tag:<4} {nb}")
 
     # ---- L2 四格表（跨 cell 聚合）----
-    print("\n=== L2 四格表（预测 SOURCE_BUILD × 实际是否编译；仅 install=ok 且 risk 确定）===")
-    print(f"  TP(预测编译·真编译)={tp}   FP(预测编译·实免编)={fp}")
-    print(f"  FN(预测免编·真编译)={fn}   TN(预测免编·实免编)={tn}")
-    print(f"  「不确定」预测(risk=UNVERIFIED/AMBIGUOUS，未计入)={l2_undetermined}")
+    print(
+        "\n=== L2 four-square table (predicted SOURCE_BUILD x actually compiled; "
+        "install=ok and determinate risk only) ==="
+    )
+    print(f"  TP(predicted compile / actually compiled)={tp}   FP(predicted compile / actually prebuilt)={fp}")
+    print(f"  FN(predicted prebuilt / actually compiled)={fn}   TN(predicted prebuilt / actually prebuilt)={tn}")
+    print(f"  undetermined predictions (risk=UNVERIFIED/AMBIGUOUS, excluded)={l2_undetermined}")
     denom = tp + fn
     fp_denom = fp + tn
     fn_rate = fn / denom if denom else float("nan")
     fp_rate = fp / fp_denom if fp_denom else float("nan")
-    print(f"  L2 FN漏报率={fn_rate:.2%}   L2 FP误报率={fp_rate:.2%}")
+    print(f"  L2 FN miss rate={fn_rate:.2%}   L2 FP false-alarm rate={fp_rate:.2%}")
 
     # ---- 方案 E：确定性覆盖率（Fail-Closed 的诚实度量）----
     # 四格表只统计「确定」样本；UNVERIFIED 单列。但「全判 UNVERIFIED」会让 FN/FP 双零、
@@ -211,19 +214,25 @@ def main() -> int:
     determinate = tp + fp + fn + tn
     install_ok = determinate + l2_undetermined
     coverage = determinate / install_ok if install_ok else float("nan")
-    print(f"  确定性覆盖率(determinate/install-ok)={determinate}/{install_ok}={coverage:.1%}")
-    print("  （覆盖率过低 = 回避判定；四格表数字须与覆盖率一起读才有意义）")
+    print(
+        f"  deterministic coverage (determinate/install-ok)="
+        f"{determinate}/{install_ok}={coverage:.1%}"
+    )
+    print(
+        "  (low coverage means verdicts are being dodged; the four-square numbers are only"
+        " meaningful next to coverage)"
+    )
     if not (tp + fp + fn + tn):
-        print("  （无任何带预测的样本 —— 先跑 run-matrix.sh 使其在容器内产出 prediction.json）")
+        print("  (no sample with a prediction -- run run-matrix.sh so a prediction.json is produced in-cell)")
     if args.blockers:
-        print(f"\n=== L3 阻塞项统计 ===")
-        print(f"  有预测计数的样本: {l3_with_pred}，其中预测含阻塞项: {l3_predict_block}")
-        print("  （提示：install=install-failed 且预测含阻塞项 → 阻塞判断可能正确；")
-        print("    install 成功却预测含阻塞项 → 阻塞过度，属 FP）")
+        print("\n=== L3 blocker statistics ===")
+        print(f"  samples with blocker counts: {l3_with_pred}, of which predicted to have blockers: {l3_predict_block}")
+        print("  (note: install=install-failed AND predicted blockers -> the blocker call may be right;")
+        print("   install succeeded yet blockers predicted -> over-blocking, i.e. FP)")
     else:
-        print("\n提示：加 --blockers 看 L3 阻塞项统计。")
+        print("\nhint: pass --blockers to see the L3 blocker statistics.")
 
-    print(f"\n总计 compiled_yes={grand['yes']} compiled_no={grand['no']} install_failed={grand['failed']}")
+        print(f"\ntotals compiled_yes={grand['yes']} compiled_no={grand['no']} install_failed={grand['failed']}")
     return 0
 
 

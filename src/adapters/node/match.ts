@@ -106,16 +106,16 @@ function buildAllowScriptsNote(
   const blocked = policy === 'blocked'
   const what =
     pattern === DistributionPattern.SourceOnly
-      ? '编译（node-gyp rebuild）'
+      ? 'a compile (node-gyp rebuild)'
       : pattern === DistributionPattern.RemoteDownload
-        ? '下载预编译产物（prebuild-install / node-pre-gyp）'
+        ? 'a download of a prebuilt artifact (prebuild-install / node-pre-gyp)'
         : pattern === DistributionPattern.Prebuildify
-          ? '隐式 node-gyp rebuild（tarball 含 binding.gyp）'
-          : 'install 脚本（可能编译 / 下载原生产物）'
+          ? 'an implicit node-gyp rebuild (the tarball contains binding.gyp)'
+          : 'an install script (may compile or download a native artifact)'
   return {
     policy,
-    detail: `npm ${npmVersion ?? '未知'} ${blocked ? '默认阻止' : '将默认阻止（当前仅告警）'} install 脚本（allowScripts${blocked ? ' 默认关闭' : ''}）——本包依赖 ${what}，脚本被跳过会「安装成功但产物缺失」`,
-    remedy: `在 package.json 的 allowScripts 批准 ${name}（npm approve-scripts ${name}），或 npm install --allow-scripts=${name}`,
+    detail: `npm ${npmVersion ?? 'unknown'} ${blocked ? 'blocks' : 'will block (warn-only today)'} install scripts (allowScripts${blocked ? ' is off by default' : ''}) — this package relies on ${what}, and skipping the script leaves a "successful" install with the artifact missing`,
+    remedy: `approve ${name} in the package.json "allowScripts" field (npm approve-scripts ${name}), or run npm install --allow-scripts=${name}`,
   }
 }
 
@@ -158,8 +158,8 @@ export function matchCandidate(input: MatchInput): PackageFinding {
           'install-script-intent',
           `scripts:${pkg.name}@${pkg.version}`,
           scriptText
-            ? `preinstall/install/postinstall 已读取但语义仍无法静态确定（${scriptText}）`
-            : 'lockfile 记录有 install 脚本，但 registry manifest 未提供 preinstall/install/postinstall 内容，无法静态解析分发模式',
+            ? `preinstall/install/postinstall was read, but its intent still cannot be determined statically (${scriptText})`
+            : 'the lockfile records an install script, but the registry manifest exposes no preinstall/install/postinstall body, so the distribution pattern cannot be resolved statically',
           scriptText ? Reliability.Unverified : Reliability.Inferred,
           { layer: scriptText ? 2 : 1, positive: true },
         ),
@@ -185,7 +185,8 @@ export function matchCandidate(input: MatchInput): PackageFinding {
         artifacts: [],
         requirements: [],
         blockers,
-        resolveHint: '人工审查该包的 scripts.preinstall/install/postinstall 内容，确认是否涉及编译',
+        resolveHint:
+          'review the scripts.preinstall/install/postinstall of this package by hand and decide whether it compiles',
         ...(allowScripts ? { allowScripts } : {}),
         paths: pkgRef.paths,
       }
@@ -198,7 +199,7 @@ export function matchCandidate(input: MatchInput): PackageFinding {
         evidence(
           'install-script-intent',
           `scripts:${pkg.name}@${pkg.version}`,
-          `preinstall/install/postinstall 语义为编译（${s.script}）→ 本地源码构建`,
+          `preinstall/install/postinstall intent is compile (${s.script}) → local source build`,
           Reliability.Replay,
           { layer: 2, positive: true },
         ),
@@ -210,7 +211,7 @@ export function matchCandidate(input: MatchInput): PackageFinding {
         evidence(
           'install-script-intent',
           `scripts:${pkg.name}@${pkg.version}`,
-          `preinstall/install/postinstall 语义为${s.intent === 'download' ? '远端下载' : '先下载、失败才编译'}（${s.script}）→ 远端下载`,
+          `preinstall/install/postinstall intent is ${s.intent === 'download' ? 'a remote download' : 'download first, compile on failure'} (${s.script}) → remote download`,
           Reliability.Replay,
           { layer: 2, positive: true },
         ),
@@ -230,7 +231,7 @@ export function matchCandidate(input: MatchInput): PackageFinding {
         evidence(
           'install-script-intent',
           `scripts:${pkg.name}@${pkg.version}`,
-          `preinstall/install/postinstall 语义为 select（不编译不下载，如 funding 提示）：${s.script} → 非 native`,
+          `preinstall/install/postinstall intent is select (no compile, no download — a funding notice, say): ${s.script} → not native`,
           Reliability.Inferred,
           { layer: 2, positive: false },
         ),
@@ -243,7 +244,7 @@ export function matchCandidate(input: MatchInput): PackageFinding {
     evidence(
       'not-native',
       `node:${pkg.name}@${pkg.version}`,
-      `判定为分发模式 ${patternName(pattern)}（${pattern}）`,
+      `classified as distribution pattern ${patternName(pattern)} (${pattern})`,
       Reliability.Replay,
       { positive: pattern !== DistributionPattern.NotNative },
     ),
@@ -279,7 +280,7 @@ export function matchCandidate(input: MatchInput): PackageFinding {
         evidence(
           'platform-constraint',
           `lockfile:${pkg.name}@${pkg.version}#os/cpu/libc`,
-          `本包声明 ${declared}，当前环境为 ${host}：npm 不会安装（EBADPLATFORM）`,
+          `this package declares ${declared} while the current environment is ${host}: npm will not install it (EBADPLATFORM)`,
           Reliability.Replay,
           { positive: true },
         ),
@@ -288,9 +289,10 @@ export function matchCandidate(input: MatchInput): PackageFinding {
       requirements: [],
       blockers: [
         {
-          name: '平台不适用',
-          detail: `包声明 ${declared}，当前环境 ${host}`,
-          remedy: '在受支持的平台上安装，或改用该平台上可用的替代包',
+          name: 'platform not applicable',
+          detail: `package declares ${declared}, current environment ${host}`,
+          remedy:
+            'install on a supported platform, or switch to an alternative that works on this one',
         },
       ],
       paths: pkgRef.paths,
@@ -322,7 +324,7 @@ export function matchCandidate(input: MatchInput): PackageFinding {
           evidence(
             'platform-constraint',
             `lockfile:${pkg.name}@${pkg.version}#optionalDependencies`,
-            `平台子包 ${sub.name} 满足当前平台（${env.os}-${env.arch}），无需本地编译`,
+            `platform sub-package ${sub.name} matches the current platform (${env.os}-${env.arch}); no local compile needed`,
             Reliability.Replay,
             { positive: false },
           ),
@@ -334,12 +336,12 @@ export function matchCandidate(input: MatchInput): PackageFinding {
         // stays UNVERIFIED rather than being inflated into HIGH.
         risk = RiskLevel.UNVERIFIED
         resolveHintOverride =
-          '确认 lockfile 与当前平台一致（重新生成：npm install --package-lock-only）'
+          'confirm the lockfile matches this platform (regenerate: npm install --package-lock-only)'
         chain.push(
           evidence(
             'platform-constraint',
             `lockfile:${pkg.name}@${pkg.version}#optionalDependencies`,
-            `可选子包没有任何一个匹配当前平台（${env.os}-${env.arch}）；锁文件中的平台：${sub.available}`,
+            `none of the optional sub-packages matches the current platform (${env.os}-${env.arch}); platforms recorded in the lockfile: ${sub.available}`,
             Reliability.Inferred,
             { positive: true },
           ),
@@ -353,7 +355,7 @@ export function matchCandidate(input: MatchInput): PackageFinding {
           evidence(
             'platform-constraint',
             `lockfile:${pkg.name}@${pkg.version}#optionalDependencies`,
-            '子包未记录 os/cpu/libc，无法离线确认本平台是否有对应产物',
+            'the sub-packages record no os/cpu/libc, so whether an artifact exists for this platform cannot be confirmed offline',
             Reliability.Unverified,
             { positive: true },
           ),
@@ -372,7 +374,7 @@ export function matchCandidate(input: MatchInput): PackageFinding {
           evidence(
             'prebuilds-in-tarball',
             `tarball:${pkg.name}@${pkg.version}#prebuilds/`,
-            `prebuilds/ 含本平台产物（${env.os}-${env.arch}），无需本地编译`,
+            `prebuilds/ contains an artifact for this platform (${env.os}-${env.arch}); no local compile needed`,
             Reliability.Replay,
             { layer: 2, positive: false },
           ),
@@ -389,7 +391,7 @@ export function matchCandidate(input: MatchInput): PackageFinding {
           evidence(
             'prebuilds-in-tarball',
             `tarball:${pkg.name}@${pkg.version}#prebuilds/`,
-            `prebuilds/ 无本平台（${env.os}-${env.arch}）产物，将降级本地编译`,
+            `prebuilds/ has no artifact for this platform (${env.os}-${env.arch}); falls back to a local compile`,
             Reliability.Replay,
             { layer: 2, positive: true },
           ),
@@ -403,7 +405,7 @@ export function matchCandidate(input: MatchInput): PackageFinding {
           evidence(
             'remote-artifact-http',
             `tarball:${pkg.name}@${pkg.version}#prebuilds/`,
-            'tarball 扫描触顶未读完，无法确认本平台产物，维持未验证',
+            'the tarball scan hit its budget before finishing, so the platform artifact cannot be confirmed; stays unverified',
             Reliability.Unverified,
             { layer: 2, positive: true },
           ),
@@ -416,7 +418,7 @@ export function matchCandidate(input: MatchInput): PackageFinding {
           evidence(
             'remote-artifact-http',
             `tarball:${pkg.name}@${pkg.version}#prebuilds/`,
-            'prebuilds/ 清单需读取 tarball（--deep 流式取证），默认未验证',
+            'the prebuilds/ manifest requires reading the tarball (--deep streaming forensics); unverified by default',
             Reliability.Unverified,
             { layer: 2, positive: true },
           ),
@@ -438,7 +440,7 @@ export function matchCandidate(input: MatchInput): PackageFinding {
           evidence(
             'remote-artifact-http',
             `remote:${pkg.name}@${pkg.version}`,
-            '远端预编译产物存在（HEAD 200），默认免编；下载失败将降级源码编译（见 fallback）',
+            'a remote prebuilt artifact exists (HEAD 200), so no compile by default; a failed download falls back to a source build (see fallback)',
             Reliability.Replay,
             { layer: 2, positive: false },
           ),
@@ -453,7 +455,7 @@ export function matchCandidate(input: MatchInput): PackageFinding {
           evidence(
             'remote-artifact-http',
             `remote:${pkg.name}@${pkg.version}`,
-            '远端预编译产物不存在（HEAD 404），将降级本地编译',
+            'no remote prebuilt artifact (HEAD 404); falls back to a local compile',
             Reliability.Replay,
             { layer: 2, positive: true },
           ),
@@ -467,8 +469,8 @@ export function matchCandidate(input: MatchInput): PackageFinding {
             'remote-artifact-http',
             `remote:${pkg.name}@${pkg.version}`,
             v
-              ? '远端预编译产物取证超时/异常，维持未验证'
-              : '远端预编译产物未验证（--deep 发起 HEAD）',
+              ? 'remote artifact forensics timed out or errored; stays unverified'
+              : 'remote artifact unverified (--deep issues the HEAD)',
             Reliability.Unverified,
             { layer: 2, positive: true },
           ),
@@ -481,24 +483,24 @@ export function matchCandidate(input: MatchInput): PackageFinding {
       strategy = InstallStrategy.SourceBuild
       risk = RiskLevel.MEDIUM
       requirements.push(
-        { name: 'Python', versionRequirement: '>= 3.6', source: 'node-gyp 需要' },
-        { name: 'C/C++ 编译器', source: 'node-gyp rebuild' },
+        { name: 'Python', versionRequirement: '>= 3.6', source: 'required by node-gyp' },
+        { name: 'C/C++ compiler', source: 'node-gyp rebuild' },
       )
       if (!env.python) {
         blockers.push({
           name: 'Python',
-          detail: '未检测到 python3 / python / py',
-          remedy: '安装 Python 3.6+ 并确保在 PATH 中',
+          detail: 'no python3 / python / py found',
+          remedy: 'install Python 3.6+ and make sure it is on PATH',
         })
       }
       if (!env.compiler || !env.compiler.cxxProbe) {
         blockers.push({
-          name: 'C/C++ 编译器',
+          name: 'C/C++ compiler',
           detail: env.compiler
-            ? `${env.compiler.name} 存在但 C++ 编译探针失败`
-            : '未检测到可用 C/C++ 编译器',
+            ? `${env.compiler.name} is present, but the C++ compile probe failed`
+            : 'no usable C/C++ compiler found',
           remedy:
-            '安装编译器（macOS: Xcode CLT；Linux: build-essential；Windows: MSVC Build Tools）',
+            'install a compiler (macOS: Xcode CLT; Linux: build-essential; Windows: MSVC Build Tools)',
         })
       }
       // Any blocker → HIGH; complete toolchain → MEDIUM
@@ -562,8 +564,8 @@ function buildSystemLibNote(name: string, env: Environment): SystemLibNote | und
   if (probe.present.includes(hint.pkgConfig)) return undefined
   return {
     libs: [hint.display],
-    detail: `本包可能链接系统库 ${hint.display}，当前未通过 pkg-config 检测到（可能未安装、或未安装开发头文件）`,
-    remedy: `Debian/Ubuntu: apt install ${hint.devPkg}；Alpine 请查对应包名。若该包内置/自带此库可忽略本提示`,
+    detail: `this package may link the system library ${hint.display}, which pkg-config did not find (it may be missing, or its development headers may be)`,
+    remedy: `Debian/Ubuntu: apt install ${hint.devPkg}; on Alpine look up the matching package name. Ignore this hint if the package bundles the library itself`,
   }
 }
 
@@ -594,7 +596,7 @@ function platformSubpackageMatch(
   const shown = platforms.slice(0, 6).join(' / ')
   return {
     state: 'absent',
-    available: platforms.length > 6 ? `${shown} …（共 ${platforms.length} 种）` : shown,
+    available: platforms.length > 6 ? `${shown} … (${platforms.length} in total)` : shown,
   }
 }
 
@@ -604,15 +606,16 @@ function describePlatformConstraint(pkg: Pick<LockfilePackage, 'os' | 'cpu' | 'l
   if (pkg.os?.length) parts.push(`os=${pkg.os.join('|')}`)
   if (pkg.cpu?.length) parts.push(`cpu=${pkg.cpu.join('|')}`)
   if (pkg.libc?.length) parts.push(`libc=${pkg.libc.join('|')}`)
-  return parts.length > 0 ? parts.join(' ') : '无平台约束'
+  return parts.length > 0 ? parts.join(' ') : 'no platform constraint'
 }
 
 /** The fallback path is an annotation, not the main verdict. */
 function fallbackPlan(pattern: DistributionPattern, env: Environment): FallbackPlan | undefined {
   if (pattern === DistributionPattern.RemoteDownload) {
     return {
-      description: '远端下载失败时降级 node-gyp rebuild（附注，非主路径）',
-      requirements: ['Python >= 3.6', 'C/C++ 编译器'],
+      description:
+        'falls back to node-gyp rebuild when the remote download fails (a footnote, not the main path)',
+      requirements: ['Python >= 3.6', 'C/C++ compiler'],
       // Use the same toolchain blocker detection as the main verdict (both python
       // and the C/C++ compiler), otherwise the fallback note would miss the key
       // risk that "degrading to a source compile will fail" when no compiler exists.
@@ -627,15 +630,15 @@ function fallbackPlan(pattern: DistributionPattern, env: Environment): FallbackP
 function patternName(pattern: DistributionPattern): string {
   switch (pattern) {
     case DistributionPattern.PlatformOptionalDeps:
-      return 'A(平台可选依赖)'
+      return 'A(platform optional deps)'
     case DistributionPattern.Prebuildify:
       return 'B(prebuildify)'
     case DistributionPattern.RemoteDownload:
-      return 'C(远端下载)'
+      return 'C(remote download)'
     case DistributionPattern.SourceOnly:
-      return 'D(纯源码)'
+      return 'D(source only)'
     default:
-      return '非 native'
+      return 'not native'
   }
 }
 

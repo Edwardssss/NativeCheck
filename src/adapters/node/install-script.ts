@@ -149,11 +149,11 @@ export function inspectScript(script: string | undefined): readonly ScriptSegmen
 
 // User-facing labels (Chinese) rendered in reports and by the CLI.
 const INTENT_LABEL: Record<ScriptIntent, string> = {
-  compile: '真的编译',
-  download: '远端下载',
-  download_then_compile: '先下载，失败才编译',
-  select: '挑选已有产物，不编译',
-  unknown: '无法静态确定',
+  compile: 'compiles for real',
+  download: 'downloads a remote artifact',
+  download_then_compile: 'downloads first, compiles only on failure',
+  select: 'picks an existing artifact, never compiles',
+  unknown: 'cannot be determined statically',
 }
 
 export function describeIntent(intent: ScriptIntent): string {
