@@ -56,6 +56,8 @@ jobs:
       - run: npm run test:coverage
       - run: npm run rules:coverage:strict
       - run: npm run format:check
+      # A release is the last moment an advisory can still be cheap to act on.
+      - run: npm run audit
       - run: npm run build
 
       # No token: npm authenticates through the workflow's OIDC identity.
