@@ -491,6 +491,9 @@ async function createProxyDispatcher(proxyUrl: string): Promise<unknown> {
   } catch (error) {
     throw new Error(
       `proxy ${proxyUrl} is configured but a dispatcher could not be created: ${error instanceof Error ? error.message : String(error)}`,
+      // Keep the original failure attached: the message is for the user, the
+      // cause is what a bug report needs.
+      { cause: error },
     )
   }
 }

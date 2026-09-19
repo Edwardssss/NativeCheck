@@ -13,7 +13,7 @@ What is this machine missing?
 
 ## Quick start
 
-Requires **Node.js ≥ 20.17**. Run it with `npx`, or install it globally:
+Requires **Node.js ≥ 20.19**. Run it with `npx`, or install it globally:
 
 | Method                   | Command                      |
 | ------------------------ | ---------------------------- |
@@ -191,7 +191,7 @@ reliable than scraping logs).
 ## Supported inputs
 
 ```text
-✓ Node.js ≥ 20.17 · npm
+✓ Node.js ≥ 20.19 · npm
 ✓ package.json + package-lock.json   (lockfileVersion 2 / 3)
 ✓ pnpm-lock.yaml                     (packages + snapshots)
 ✓ yarn.lock                          (v1 classic + Berry __metadata)
