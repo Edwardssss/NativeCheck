@@ -9,6 +9,11 @@ npm run typecheck && npm test
 
 Node **>= 20.17** is required (`@npmcli/arborist@9`).
 
+`.npmrc` sets `engine-strict=true`, so one dependency that wants a newer Node
+turns `npm ci` into a hard failure on the oldest CI job. Declared dependencies
+therefore have to admit the floor in `engines`, which `test/node-floor.test.ts`
+enforces.
+
 ## Branches and commits
 
 - Branch names: `feat/...`, `fix/...`, `chore/...`, `docs/...`
