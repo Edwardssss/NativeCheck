@@ -5,8 +5,15 @@ name: publish
 # Trigger: push a tag `v*` (e.g. `v1.0.0`). The tag must match package.json's
 # version — the job asserts this before publishing to prevent a version skew.
 #
-# Provenance requires the OIDC token (`id-token: write`), which proves the
-# tarball was built by this exact workflow on the official repository.
+# Authentication is npm **trusted publishing** (OIDC), so this repository stores
+# no publishing token: `id-token: write` lets npm mint a short-lived credential
+# and the provenance attestation from the workflow identity. One-time setup on
+# npmjs.com: the `nativecheck` package → Settings → Trusted Publisher → GitHub
+# Actions, with this repository and the workflow filename `publish.yml`.
+#
+# Trusted publishing needs npm >= 11.5.1, which is why the job builds on a Node
+# line that ships it (see the setup-node step). If a token is ever needed again,
+# `NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}` on the publish step is the fallback.
 
 on:
   push:
@@ -14,7 +21,7 @@ on:
 
 permissions:
   contents: read
-  id-token: write # required for `npm publish --provenance`
+  id-token: write # required for trusted publishing and `npm publish --provenance`
 
 jobs:
   publish:
@@ -27,7 +34,8 @@ jobs:
 
       - uses: actions/setup-node@v4
         with:
-          node-version: '22'
+          # Node 24 ships npm 11.x: trusted publishing needs >= 11.5.1.
+          node-version: '24'
           cache: npm
           registry-url: 'https://registry.npmjs.org'
 
@@ -42,14 +50,15 @@ jobs:
 
       - run: npm ci
 
-      # Full quality gates before any publish (same contract as CI + prepublishOnly).
+      # Full quality gates before any publish (the same contract as CI).
       - run: npm run lint
       - run: npm run typecheck
-      - run: npm test
+      - run: npm run test:coverage
       - run: npm run rules:coverage:strict
+      - run: npm run format:check
+      # A release is the last moment an advisory can still be cheap to act on.
+      - run: npm run audit
       - run: npm run build
 
-      - name: Publish to npm (with provenance)
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
-        run: npm publish --provenance --access public
+      # No token: npm authenticates through the workflow's OIDC identity.
+      - run: npm publish --provenance --access public
