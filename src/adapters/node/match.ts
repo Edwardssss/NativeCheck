@@ -30,6 +30,7 @@ import { RiskLevel } from '../../core/risk'
 import type { NativeCandidate } from './classify'
 import { matchesPlatform } from './classify'
 import { allowScriptsPolicy } from './npm-policy'
+import { missingSubpackageMode } from './platform-fallback'
 import type { LockfilePackage } from './signals'
 import { systemLibHint } from './system-libs'
 import type { VerifyOutcome } from './verify'
@@ -331,12 +332,12 @@ export function matchCandidate(input: MatchInput): PackageFinding {
         )
       } else if (sub.state === 'absent') {
         // The sub-packages carry platform constraints and none matches → this
-        // lockfile cannot supply a binary here. That much is certain; whether the
-        // install script then fails hard or fetches something is not, so this
-        // stays UNVERIFIED rather than being inflated into HIGH.
-        risk = RiskLevel.UNVERIFIED
-        resolveHintOverride =
-          'confirm the lockfile matches this platform (regenerate: npm install --package-lock-only)'
+        // lockfile cannot supply a binary here. That part is certain. What happens
+        // next depends on the package family, so it is looked up in a curated table
+        // (Inferred, never Replay) instead of being guessed: a family that installs
+        // fine and breaks at require time is a different problem from one whose
+        // postinstall aborts. Families nobody verified stay UNVERIFIED.
+        const fallback = missingSubpackageMode(pkg.name)
         chain.push(
           evidence(
             'platform-constraint',
@@ -346,6 +347,32 @@ export function matchCandidate(input: MatchInput): PackageFinding {
             { positive: true },
           ),
         )
+        if (fallback) {
+          risk = RiskLevel.HIGH
+          const installFails = fallback.mode === 'install-fails'
+          chain.push(
+            evidence(
+              'platform-constraint',
+              `rules:platform-fallback#${pkg.name}`,
+              `${fallback.reason}, so on this platform ${installFails ? 'the install fails outright' : 'the install succeeds but the build or runtime fails'}`,
+              Reliability.Inferred,
+              { positive: true },
+            ),
+          )
+          blockers.push({
+            name: installFails
+              ? 'platform sub-package missing (install fails)'
+              : 'platform sub-package missing (runtime fails)',
+            detail: `the lockfile has no sub-package for ${env.os}-${env.arch}; ${fallback.reason}`,
+            remedy: installFails
+              ? 'regenerate the lockfile on this platform (npm install --package-lock-only), or switch to an alternative that does not rely on platform sub-packages'
+              : 'regenerate the lockfile on this platform (npm install --package-lock-only); with a cross-platform lockfile the install looks fine and the missing native module only shows up at runtime',
+          })
+        } else {
+          risk = RiskLevel.UNVERIFIED
+          resolveHintOverride =
+            'confirm the lockfile matches this platform (regenerate: npm install --package-lock-only)'
+        }
       } else {
         // No platform information on the sub-packages (pnpm / yarn adapters, or a
         // lockfile that never recorded os/cpu): mode A is confirmed, the platform
