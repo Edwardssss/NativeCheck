@@ -151,16 +151,17 @@ export function matchCandidate(input: MatchInput): PackageFinding {
   // verify) → stay AMBIGUOUS (neutral gray, never guess).
   if (candidate.verdict === NativeVerdict.Suspicious && pattern === DistributionPattern.NotNative) {
     const s = input.verify?.installScript
-    if (!s || s.intent === 'unknown') {
+    const scriptText = s?.script ?? ''
+    if (!s || !scriptText || s.intent === 'unknown') {
       chain.push(
         evidence(
           'install-script-intent',
           `scripts:${pkg.name}@${pkg.version}`,
-          s
-            ? `install/postinstall 已读取但语义仍无法静态确定（${s.script}）`
-            : `存在 install 脚本但 V0.1 无法静态解析其分发模式（lockfile 只记 hasInstallScript，不含脚本内容）`,
-          s ? Reliability.Unverified : Reliability.Inferred,
-          { layer: s ? 2 : 1, positive: true },
+          scriptText
+            ? `preinstall/install/postinstall 已读取但语义仍无法静态确定（${scriptText}）`
+            : 'lockfile 记录有 install 脚本，但 registry manifest 未提供 preinstall/install/postinstall 内容，无法静态解析分发模式',
+          scriptText ? Reliability.Unverified : Reliability.Inferred,
+          { layer: scriptText ? 2 : 1, positive: true },
         ),
       )
       const allowScripts = buildAllowScriptsNote(
@@ -177,12 +178,14 @@ export function matchCandidate(input: MatchInput): PackageFinding {
         pattern,
         strategy: InstallStrategy.Unknown,
         risk: RiskLevel.AMBIGUOUS,
-        reliability: s ? Reliability.Unverified : Reliability.Inferred,
+        // Same source as the evidence above — the finding must not claim a weaker
+        // grade than its own evidence chain (or the other way around).
+        reliability: scriptText ? Reliability.Unverified : Reliability.Inferred,
         evidence: chain,
         artifacts: [],
         requirements: [],
         blockers,
-        resolveHint: '人工审查该包的 scripts.install/postinstall 内容，确认是否涉及编译',
+        resolveHint: '人工审查该包的 scripts.preinstall/install/postinstall 内容，确认是否涉及编译',
         ...(allowScripts ? { allowScripts } : {}),
         paths: pkgRef.paths,
       }
@@ -195,7 +198,7 @@ export function matchCandidate(input: MatchInput): PackageFinding {
         evidence(
           'install-script-intent',
           `scripts:${pkg.name}@${pkg.version}`,
-          `install/postinstall 语义为编译（${s.script}）→ 本地源码构建`,
+          `preinstall/install/postinstall 语义为编译（${s.script}）→ 本地源码构建`,
           Reliability.Replay,
           { layer: 2, positive: true },
         ),
@@ -207,7 +210,7 @@ export function matchCandidate(input: MatchInput): PackageFinding {
         evidence(
           'install-script-intent',
           `scripts:${pkg.name}@${pkg.version}`,
-          `install/postinstall 语义为${s.intent === 'download' ? '远端下载' : '先下载、失败才编译'}（${s.script}）→ 远端下载`,
+          `preinstall/install/postinstall 语义为${s.intent === 'download' ? '远端下载' : '先下载、失败才编译'}（${s.script}）→ 远端下载`,
           Reliability.Replay,
           { layer: 2, positive: true },
         ),
@@ -227,7 +230,7 @@ export function matchCandidate(input: MatchInput): PackageFinding {
         evidence(
           'install-script-intent',
           `scripts:${pkg.name}@${pkg.version}`,
-          `install/postinstall 语义为 select（不编译不下载，如 funding 提示）：${s.script} → 非 native`,
+          `preinstall/install/postinstall 语义为 select（不编译不下载，如 funding 提示）：${s.script} → 非 native`,
           Reliability.Inferred,
           { layer: 2, positive: false },
         ),
