@@ -80,6 +80,11 @@ export interface PackageFinding {
   readonly allowScripts?: AllowScriptsNote
   /** System-library advisory (SourceBuild + a mapped-but-undetected system library). */
   readonly systemLibs?: SystemLibNote
+  /**
+   * Suppressed by `--ignore`: kept in the report (the JSON stays a full census)
+   * but excluded from the CI gate decision.
+   */
+  readonly ignored?: boolean
   /** Dependency paths: answers "who brought native into the project". */
   readonly paths: readonly DependencyPath[]
 }

@@ -7,6 +7,7 @@
  */
 import pc from 'picocolors'
 import type { ScanReport, PackageFinding } from '../core/report'
+import type { GateDecision } from '../core/gate'
 import type { Environment } from '../core/model'
 import { RISK_META } from '../core/risk'
 import { MARKER, RELIABILITY_LABEL } from '../core/evidence'
@@ -60,9 +61,10 @@ export function renderFinding(finding: PackageFinding): string {
   const owned = finding.pkg.workspaces?.length
     ? `  ${pc.dim(`(workspaces: ${finding.pkg.workspaces.join(', ')})`)}`
     : ''
+  const suffix = finding.ignored ? ` ${pc.dim('[ignored]')}` : ''
   const lines: string[] = [
     '',
-    `${meta.badge} ${pc.bold(name)}  ${pc.dim(meta.label.toUpperCase())}${owned}`,
+    `${meta.badge} ${pc.bold(name)}  ${pc.dim(meta.label.toUpperCase())}${suffix}${owned}`,
   ]
 
   if (finding.paths.length > 0) {
@@ -133,6 +135,26 @@ export function renderReport(report: ScanReport): string {
     parts.push(renderFinding(finding))
   }
   return parts.join('\n') + '\n'
+}
+
+/**
+ * CI gate block: what (if anything) failed the build, and what was suppressed.
+ * Rendered whenever the gate has something to say, so a red build always comes
+ * with its reasons and a green one still shows what was ignored.
+ */
+export function renderGate(decision: GateDecision): string {
+  const lines: string[] = []
+  if (decision.reasons.length > 0) {
+    lines.push('', pc.red('Gate: failed'))
+    for (const reason of decision.reasons) lines.push(`  ✗ ${reason}`)
+  }
+  if (decision.ignored.length > 0) {
+    lines.push(
+      '',
+      pc.dim(`Gate: ${decision.ignored.length} ignored (${decision.ignored.join(', ')})`),
+    )
+  }
+  return lines.join('\n')
 }
 
 /** Environment check-up output (`nativecheck env`). */

@@ -109,6 +109,8 @@ export const packageFindingSchema = z.object({
   resolveHint: z.string().optional(),
   allowScripts: allowScriptsSchema.optional(),
   systemLibs: systemLibNoteSchema.optional(),
+  // Declared so zod does not strip the `--ignore` marker from `--json` output.
+  ignored: z.boolean().optional(),
   paths: z.array(dependencyPathSchema),
 })
 
