@@ -30,7 +30,7 @@ jobs:
     # set ALLOW_FORK_PUBLISH=1 to enable).
     if: github.repository_owner == 'Edwardssss' || github.ref_type != 'tag'
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       - uses: actions/setup-node@v4
         with:
