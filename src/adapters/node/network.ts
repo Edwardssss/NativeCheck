@@ -448,6 +448,147 @@ export function deriveNodePreGypUrl(
 }
 
 /* ------------------------------------------------------------------ *
+ * Proxy + retry policy for the online forensics (--deep) paths.
+ *
+ * Layer 2 is the only part of the tool that talks to the network, so it is the
+ * only place that has to survive a real corporate network: requests must honour
+ * the standard proxy variables (Node's global fetch does not), and a transient
+ * 429 / 5xx / socket error should be retried instead of collapsing straight into
+ * "unverified".
+ * ------------------------------------------------------------------ */
+
+/** Standard proxy variables, in the order curl/npm resolve them. */
+export const PROXY_ENV_KEYS: readonly string[] = [
+  'HTTPS_PROXY',
+  'https_proxy',
+  'HTTP_PROXY',
+  'http_proxy',
+  'ALL_PROXY',
+  'all_proxy',
+  'NC_PROXY',
+]
+
+/** The proxy URL to use, if any. Pure, so the resolution order is testable. */
+export function resolveProxyUrl(env: NodeJS.ProcessEnv = process.env): string | undefined {
+  for (const key of PROXY_ENV_KEYS) {
+    const value = env[key]?.trim()
+    if (value) return value
+  }
+  return undefined
+}
+
+/**
+ * Build a proxy dispatcher for global fetch.
+ *
+ * A configured proxy that cannot be honoured is an explicit error: silently
+ * going direct would look like "the registry is unreachable" while the real
+ * problem is a missing/mis-specified proxy, which is a support nightmare.
+ */
+async function createProxyDispatcher(proxyUrl: string): Promise<unknown> {
+  try {
+    const { ProxyAgent } = await import('undici')
+    return new ProxyAgent(proxyUrl)
+  } catch (error) {
+    throw new Error(
+      `proxy ${proxyUrl} is configured but a dispatcher could not be created: ${error instanceof Error ? error.message : String(error)}`,
+    )
+  }
+}
+
+let dispatcherPromise: Promise<unknown | undefined> | undefined
+
+/** Resolve the process-wide dispatcher once (no proxy configured → no undici import). */
+function lazyDispatcher(proxyUrl?: string): Promise<unknown | undefined> {
+  if (dispatcherPromise === undefined) {
+    const resolved = proxyUrl ?? resolveProxyUrl()
+    dispatcherPromise = resolved ? createProxyDispatcher(resolved) : Promise.resolve(undefined)
+  }
+  return dispatcherPromise
+}
+
+/** HTTP statuses worth another attempt: rate limits and transient server/network errors. */
+const RETRYABLE_STATUS: ReadonlySet<number> = new Set([408, 425, 429, 500, 502, 503, 504])
+
+/** Retry policy knobs; injectable so tests need no real waiting. */
+export interface RetryOptions {
+  /** Total attempts, including the first one. Default 3. */
+  readonly attempts?: number
+  /** Backoff base in ms (doubles per attempt). Default 250. */
+  readonly baseDelayMs?: number
+  /** Upper bound for a single wait, also caps a hostile `Retry-After`. Default 5000. */
+  readonly maxDelayMs?: number
+  /** Injectable clock; defaults to a real timer. */
+  readonly sleep?: (ms: number) => Promise<void>
+  /** Observation hook for tests/logging. */
+  readonly onRetry?: (info: { attempt: number; delayMs: number; status?: number }) => void
+}
+
+const defaultSleep = (ms: number): Promise<void> =>
+  new Promise((resolve) => setTimeout(resolve, ms))
+
+/** `Retry-After` (seconds or HTTP-date) → ms, clamped; otherwise exponential backoff. */
+export function retryDelayMs(
+  retryAfter: string | null | undefined,
+  attempt: number,
+  opts: { baseDelayMs?: number; maxDelayMs?: number } = {},
+): number {
+  const base = opts.baseDelayMs ?? 250
+  const max = opts.maxDelayMs ?? 5_000
+  const exponential = Math.min(base * 2 ** (attempt - 1), max)
+  if (!retryAfter) return exponential
+  const seconds = Number(retryAfter)
+  if (Number.isFinite(seconds) && seconds >= 0) return Math.min(seconds * 1_000, max)
+  const date = Date.parse(retryAfter)
+  if (Number.isFinite(date)) return Math.min(Math.max(date - Date.now(), 0), max)
+  return exponential
+}
+
+/**
+ * Run one request with bounded retries.
+ *
+ * Only the *response acquisition* is retried: a body that breaks halfway through
+ * (e.g. the tarball stream in Pattern B) is not re-fetched, because callers
+ * already treat that as `unknown` and re-downloading a 64 MB tarball to save a
+ * tri-state result is not worth it. 404 is returned as-is — it is an answer, not
+ * a failure.
+ */
+export async function requestWithRetry<T extends { readonly status: number }>(
+  doFetch: () => Promise<T>,
+  getRetryAfter: (response: T) => string | null | undefined = (r) =>
+    (r as { headers?: { get(name: string): string | null } }).headers?.get('retry-after'),
+  opts: RetryOptions = {},
+): Promise<T> {
+  const attempts = Math.max(1, opts.attempts ?? 3)
+  const sleep = opts.sleep ?? defaultSleep
+
+  for (let attempt = 1; ; attempt++) {
+    try {
+      const response = await doFetch()
+      const retryable = RETRYABLE_STATUS.has(response.status)
+      if (!retryable || attempt >= attempts) return response
+      const delayMs = retryDelayMs(getRetryAfter(response), attempt, opts)
+      opts.onRetry?.({ attempt, delayMs, status: response.status })
+      await sleep(delayMs)
+    } catch (error) {
+      if (attempt >= attempts) throw error
+      const delayMs = retryDelayMs(null, attempt, opts)
+      opts.onRetry?.({ attempt, delayMs })
+      await sleep(delayMs)
+    }
+  }
+}
+
+/** Retry policy for the deep-scan requests, overridable via env for CI tuning. */
+export function retryOptionsFromEnv(env: NodeJS.ProcessEnv = process.env): RetryOptions {
+  const attempts = Number(env.NC_HTTP_RETRIES)
+  const baseDelayMs = Number(env.NC_HTTP_RETRY_BASE_MS)
+  return {
+    ...(Number.isFinite(attempts) && attempts >= 1 ? { attempts } : {}),
+    ...(Number.isFinite(baseDelayMs) && baseDelayMs >= 0 ? { baseDelayMs } : {}),
+  }
+}
+
+/* ------------------------------------------------------------------ *
  * IO: forensics functions with an injectable fetch.
  * ------------------------------------------------------------------ */
 
@@ -466,9 +607,15 @@ export interface HttpLike {
   }>
 }
 
-function defaultFetch(): HttpLike {
+function defaultFetch(proxyUrl?: string): HttpLike {
   const f = globalThis.fetch.bind(globalThis)
-  return (input, init) => f(input, init as RequestInit)
+  return async (input, init) => {
+    const dispatcher = await lazyDispatcher(proxyUrl)
+    return f(input, {
+      ...(init as RequestInit),
+      ...(dispatcher ? { dispatcher } : {}),
+    } as RequestInit)
+  }
 }
 
 /** Lets callers get the default transport (global fetch when nothing is injected). */
@@ -514,9 +661,10 @@ export async function fetchManifest(
   name: string,
   version: string,
   fetchImpl: HttpLike = defaultFetch(),
+  retry: RetryOptions = retryOptionsFromEnv(),
 ): Promise<RegistryManifest> {
   const url = `${NPM_REGISTRY}/${encodeURIComponent(name)}/${encodeURIComponent(version)}`
-  const res = await fetchImpl(url, {})
+  const res = await requestWithRetry(() => fetchImpl(url, {}), undefined, retry)
   if (!res.ok) throw new Error(`registry manifest ${name}@${version}: HTTP ${res.status}`)
   const json = (await (res.body ? jsonFromStream(res.body) : null)) as {
     name?: string
@@ -613,14 +761,18 @@ export type PrebuildScan =
 export async function probePrebuilds(
   tarballUrl: string,
   env: Environment,
-  opts: { maxBytes?: number; fetchImpl?: HttpLike; napiBuild?: boolean } = {},
+  opts: { maxBytes?: number; fetchImpl?: HttpLike; napiBuild?: boolean; retry?: RetryOptions } = {},
 ): Promise<PrebuildScan> {
   const maxBytes = opts.maxBytes ?? 64 * 1024 * 1024
   const fetchImpl = opts.fetchImpl ?? defaultFetch()
   const napiBuild = opts.napiBuild ?? false
   const ac = new AbortController()
 
-  const res = await fetchImpl(tarballUrl, { signal: ac.signal })
+  const res = await requestWithRetry(
+    () => fetchImpl(tarballUrl, { signal: ac.signal }),
+    undefined,
+    opts.retry ?? retryOptionsFromEnv(),
+  )
   if (!res.ok || !res.body) {
     throw new Error(`tarball GET: HTTP ${res.status}`)
   }
@@ -750,14 +902,22 @@ export async function probePrebuilds(
 /** Pattern C forensics: a single HEAD. 200→prebuilt, 404→source-build, anything else→unverified. */
 export async function probeRemoteHead(
   url: string,
-  opts: { timeoutMs?: number; fetchImpl?: HttpLike } = {},
+  opts: { timeoutMs?: number; fetchImpl?: HttpLike; retry?: RetryOptions } = {},
 ): Promise<'prebuilt' | 'source-build' | 'unverified'> {
-  const timeoutMs = opts.timeoutMs ?? 10_000
+  // Per-attempt timeout: a HEAD that hangs must not hold the whole scan. Retries
+  // default to 2 here (not 3) so a broken proxy cannot multiply the latency of
+  // every C candidate; `NC_HTTP_RETRIES` still wins if set explicitly.
+  const timeoutMs = opts.timeoutMs ?? 8_000
   const fetchImpl = opts.fetchImpl ?? defaultFetch()
+  const retry = opts.retry ?? { attempts: 2, ...retryOptionsFromEnv() }
   const ac = new AbortController()
   const timer = setTimeout(() => ac.abort(), timeoutMs)
   try {
-    const res = await fetchImpl(url, { signal: ac.signal, method: 'HEAD' })
+    const res = await requestWithRetry(
+      () => fetchImpl(url, { signal: ac.signal, method: 'HEAD' }),
+      undefined,
+      retry,
+    )
     if (res.status === 200) return 'prebuilt'
     if (res.status === 404) return 'source-build'
     // 429 / 5xx / others → not determinable
