@@ -23,7 +23,7 @@ export {
   verdictFor,
 } from './adapters/node/classify'
 export { matchCandidate, isNativeVerdict } from './adapters/node/match'
-export { ingest, probeLockfile } from './adapters/node/ingest'
+export { ingest, probeLockfile, SUPPORTED_LOCKFILES } from './adapters/node/ingest'
 export { verifyCandidate, patternNeedsNetwork, candidateNeedsNetwork } from './adapters/node/verify'
 export {
   verifyCacheKey,
@@ -31,7 +31,9 @@ export {
   loadVerifyCache,
   saveVerifyCache,
   lookupCachedOutcome,
+  pruneVerifyCache,
   defaultVerifyCacheFs,
+  DEFAULT_TTL_MS,
 } from './adapters/node/verify-cache'
 export {
   fetchManifest,

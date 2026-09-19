@@ -33,6 +33,9 @@ export function renderSummary(report: ScanReport): string {
     `  ${RISK_META.MEDIUM.badge} ${summary.byRisk.MEDIUM ?? 0} source-build`,
     `  ${RISK_META.HIGH.badge} ${summary.byRisk.HIGH ?? 0} likely blocked`,
     `  ${RISK_META.UNVERIFIED.badge} ${summary.byRisk.UNVERIFIED ?? 0} unverified`,
+    // AMBIGUOUS used to be counted in byRisk but never rendered, so the four
+    // visible numbers silently failed to add up to `native candidates`.
+    `  ${RISK_META.AMBIGUOUS.badge} ${summary.byRisk.AMBIGUOUS ?? 0} ambiguous`,
     summary.networkCalls === 0
       ? pc.dim(`  network calls: 0`)
       : pc.dim(`  network calls: ${summary.networkCalls}`),
@@ -105,6 +108,9 @@ export function renderReport(report: ScanReport): string {
       pc.yellow('Unsupported project format'),
       `  ${report.unsupported.detected}`,
       `  ${report.unsupported.reason}`,
+      // The field was in the JSON contract but never rendered, so the user was
+      // left guessing what the tool can actually read.
+      `  ${pc.dim(`supported: ${report.unsupported.supported.join(' · ')}`)}`,
     )
     parts.push(`  ${pc.dim('No analysis performed.')}`)
     return parts.join('\n')
@@ -130,7 +136,9 @@ export function renderEnvironment(env: Environment): string {
     lines.push(`  Python ${env.python.version}${env.python.path ? ` (${env.python.path})` : ''}`)
   if (env.compiler) {
     lines.push(
-      `  C/C++ ${env.compiler.name}${env.compiler.version ? ` ${env.compiler.version}` : ''}`,
+      `  C/C++ ${env.compiler.name}${env.compiler.version ? ` ${env.compiler.version}` : ''}${
+        env.compiler.path ? ` (${env.compiler.path})` : ''
+      }`,
       `    C probe  ${env.compiler.cProbe ? '✓ 可编译' : '✗ 失败'}`,
       `    C++ probe ${env.compiler.cxxProbe ? '✓ 可编译' : '✗ 失败'}`,
     )

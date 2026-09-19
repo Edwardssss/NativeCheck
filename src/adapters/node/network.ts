@@ -179,6 +179,12 @@ export interface RemoteBinaryMeta {
   readonly config?: { runtime?: string; target?: number | string } | null
   readonly repository?: { url?: string; type?: string } | null
   readonly install?: string | null
+  /**
+   * `scripts.preinstall`: npm runs it *before* install, and a plain
+   * `node-gyp rebuild` hides here in some packages. Ignoring it left those
+   * candidates stuck at AMBIGUOUS forever.
+   */
+  readonly preinstall?: string | null
   /** `scripts.postinstall`: forensics source for SUSPICIOUS candidates' install-script semantics (core-js's funding notice lives in postinstall). */
   readonly postinstall?: string | null
   /** `scripts.build` / `scripts.prebuild`: source of the prebuildify `--napi` signal (Pattern B ABI decision). */
@@ -545,6 +551,7 @@ export async function fetchManifest(
       config: json?.config ?? null,
       repository: json?.repository ?? null,
       install: scripts.install ?? null,
+      preinstall: scripts.preinstall ?? null,
       postinstall: scripts.postinstall ?? null,
       build: scripts.build ?? null,
       prebuild: scripts.prebuild ?? null,
@@ -615,7 +622,7 @@ export async function probePrebuilds(
 
   const res = await fetchImpl(tarballUrl, { signal: ac.signal })
   if (!res.ok || !res.body) {
-    throw new Error(`tarball HEAD: HTTP ${res.status}`)
+    throw new Error(`tarball GET: HTTP ${res.status}`)
   }
 
   const observed: string[] = []

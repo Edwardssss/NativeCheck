@@ -369,6 +369,38 @@ describe('verifyCandidate · SUSPICIOUS install 脚本取证', () => {
     expect(o.networkCalls).toBe(1)
   })
 
+  it('preinstall 里的 node-gyp rebuild 也被解析（此前 preinstall 完全被忽略）', async () => {
+    // npm 依次执行 preinstall → install → postinstall，三者都会跑。只看 install /
+    // postinstall 时，只有 preinstall 的包会永远停在 AMBIGUOUS。
+    const fetchImpl: HttpLike = async () =>
+      body(
+        200,
+        JSON.stringify({
+          dist: { tarball: 'https://t/x.tgz' },
+          scripts: { preinstall: 'node-gyp rebuild' },
+        }),
+      )
+    const o = await verifyCandidate(suspicious('preinstall-compiler', '1.0.0'), env, fetchImpl)
+    expect(o.installScript?.intent).toBe('compile')
+    expect(o.installScript?.script).toBe('node-gyp rebuild')
+    expect(o.networkCalls).toBe(1)
+  })
+
+  it('跨 hook：preinstall=download + install=compile → intent=compile（按严重度合并）', async () => {
+    const fetchImpl: HttpLike = async () =>
+      body(
+        200,
+        JSON.stringify({
+          dist: { tarball: 'https://t/x.tgz' },
+          scripts: { preinstall: 'prebuild-install', install: 'node-gyp rebuild' },
+        }),
+      )
+    const o = await verifyCandidate(suspicious('three-hooks', '1.0.0'), env, fetchImpl)
+    expect(o.installScript?.intent).toBe('compile')
+    // 顺序保留 npm 的执行顺序（preinstall → install → postinstall）
+    expect(o.installScript?.script).toBe('prebuild-install ; node-gyp rebuild')
+  })
+
   it('manifest 拉取异常不抛 → 无 installScript，1 次网络', async () => {
     const fetchImpl: HttpLike = async () => {
       throw new Error('ETIMEDOUT')

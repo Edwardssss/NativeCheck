@@ -46,6 +46,18 @@ function lockfileVersion(projectRoot: string): number | undefined {
 }
 
 /**
+ * Lockfile formats ingest can read, in probe priority order. Reported verbatim
+ * when a project is unsupported, so the message cannot drift from reality (it
+ * used to hard-code npm even when pnpm / yarn / bun was the thing that failed).
+ */
+export const SUPPORTED_LOCKFILES: readonly string[] = [
+  'package-lock.json (lockfileVersion 2 / 3)',
+  'pnpm-lock.yaml (packages + snapshots)',
+  'yarn.lock (v1 classic / Berry)',
+  'bun.lockb (binary)',
+]
+
+/**
  * Probe whether the project root is supported.
  *
  * Supported: npm package-lock.json (lockfileVersion 2 / 3), pnpm-lock.yaml,
@@ -69,6 +81,16 @@ export function probeLockfile(projectRoot: string): {
   }
   if (existsSync(join(projectRoot, 'bun.lockb'))) {
     return { supported: true, detected: 'bun.lockb' }
+  }
+  // Bun 1.2+ writes a JSONC **text** lockfile by default. It is a different
+  // format (not the binary blob), so say so explicitly instead of falling
+  // through to "no parseable package-lock.json found", which reads like a bug.
+  if (existsSync(join(projectRoot, 'bun.lock'))) {
+    return {
+      supported: false,
+      detected: 'bun.lock (text)',
+      reason: 'bun 文本 lockfile 结构不同，需单独适配（当前仅支持二进制 bun.lockb）',
+    }
   }
   const version = lockfileVersion(projectRoot)
   if (version === undefined) {

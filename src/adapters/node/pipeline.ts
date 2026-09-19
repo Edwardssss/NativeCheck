@@ -12,7 +12,7 @@ import { scanEnvironment } from '../../env'
 import { summarize, type ScanReport } from '../../core/report'
 import type { Environment } from '../../core/model'
 import { classifyGraph, type NativeCandidate } from './classify'
-import { ingest } from './ingest'
+import { ingest, SUPPORTED_LOCKFILES } from './ingest'
 import { matchCandidate } from './match'
 import { candidateNeedsNetwork, verifyCandidate } from './verify'
 import type { VerifyOutcome } from './verify'
@@ -204,7 +204,7 @@ function emptyReport(
     unsupported: {
       detected: unsupported.detected,
       reason: unsupported.reason,
-      supported: ['npm package-lock.json v2 / v3'],
+      supported: [...SUPPORTED_LOCKFILES],
     },
   }
 }

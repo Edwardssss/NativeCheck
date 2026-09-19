@@ -45,8 +45,9 @@ function classifySegment(segment: string): Exclude<ScriptIntent, 'download_then_
   // `node-gyp rebuild|build|configure` — word boundaries matter so we don't swallow `node-gyp-build`
   if (/\bnode-gyp\s+(rebuild|build|configure)\b/.test(segment)) return 'compile'
   if (/\bprebuild-install\b/.test(segment)) return 'download'
+  // `\bnode-pre-gyp\b` already covers `@mapbox/node-pre-gyp` (the scope prefix
+  // ends on a non-word character), so no separate branch is needed.
   if (/\bnode-pre-gyp\b/.test(segment)) return 'download'
-  if (/\b@mapbox\/node-pre-gyp\b/.test(segment)) return 'download'
   if (/\bnode-gyp-build\b/.test(segment)) return 'select'
   // `node -e "..."` / `node --eval` inline eval: it can execute arbitrary code,
   // but in practice these are mostly benign scripts such as funding notices or
@@ -84,13 +85,13 @@ function isCustomDownloader(segment: string): boolean {
 }
 
 /**
- * Merge the intents of two independent lifecycle hooks (install + postinstall).
- * npm runs install then postinstall unconditionally, so the combined semantics
- * is "the most severe action that definitely happens":
+ * Merge the intents of two independent lifecycle hooks (preinstall / install /
+ * postinstall). npm runs them all, in that order, so the combined semantics is
+ * "the most severe action that definitely happens":
  *
  *   compile > download_then_compile > download > select > unknown
  *
- * This fixes blind spot §1.4: joining the two hooks with `||` made
+ * This fixes blind spot §1.4: joining the hooks with `||` made
  * "install downloads + postinstall compiles" look like a download-then-compile
  * *fallback*, when in fact the compile is unconditional — the package will
  * compile no matter what the download hook does.

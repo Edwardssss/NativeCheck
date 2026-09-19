@@ -37,14 +37,24 @@ function run(command: string, args: readonly string[]): string | undefined {
   }
 }
 
-function exists(command: string): boolean {
+/**
+ * Resolve a command to its absolute path (`where` on Windows, `command -v`
+ * elsewhere). The path is what tells two installed compilers apart — "the
+ * command exists" is not something a user can act on.
+ */
+function locate(command: string): string | undefined {
   try {
     const probe = process.platform === 'win32' ? 'where' : 'command'
     const args = process.platform === 'win32' ? [command] : ['-v', command]
-    execFileSync(probe, args, { stdio: 'ignore', timeout: 5_000, windowsHide: true })
-    return true
+    const out = execFileSync(probe, args, {
+      encoding: 'utf8',
+      stdio: ['ignore', 'pipe', 'ignore'],
+      timeout: 5_000,
+      windowsHide: true,
+    })
+    return out.split(/\r?\n/)[0]?.trim() || undefined
   } catch {
-    return false
+    return undefined
   }
 }
 
@@ -110,7 +120,8 @@ function compileProbe(command: string, kind: Candidate['kind'], lang: 'c' | 'cxx
 
 export function detectCompiler(): CompilerInfo | undefined {
   for (const candidate of compilerCandidates()) {
-    if (!exists(candidate.command)) continue
+    const path = locate(candidate.command)
+    if (!path) continue
 
     const version = parseVersion(
       candidate.kind === 'msvc' ? undefined : run(candidate.command, ['--version']),
@@ -119,6 +130,7 @@ export function detectCompiler(): CompilerInfo | undefined {
     return {
       name: candidate.command,
       ...(version ? { version } : {}),
+      path,
       // One command covers both C and C++: clang/gcc switch with -x, MSVC switches by extension
       cProbe: compileProbe(candidate.command, candidate.kind, 'c'),
       cxxProbe: compileProbe(candidate.command, candidate.kind, 'cxx'),
@@ -152,7 +164,7 @@ export function detectSdks(platform = process.platform): readonly Sdk[] {
 
   if (platform === 'win32') {
     // MSVC is already covered as the compiler by detectCompiler; record the build toolchain here too
-    if (exists('cl.exe')) {
+    if (locate('cl.exe')) {
       sdks.push({ name: 'MSVC Build Tools' })
     }
   }

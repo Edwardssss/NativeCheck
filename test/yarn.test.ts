@@ -113,6 +113,23 @@ describe('parseYarnLockfile (Berry __metadata)', () => {
     const platform = byName.get('@esbuild/linux-x64')
     expect(platform?.version).toBe('0.19.12')
   })
+
+  it('别名键（alias@npm:real@range）解析为真实包名', () => {
+    // Berry 把别名写成 `"my-alias@npm:node-pty@^1.0.0"`，entry 描述的是 node-pty
+    // （tarball、install 脚本、构建工具依赖都来自它）。不剥别名壳的话，name 会变成
+    // `my-alias@npm:node-pty`，所有按包名查表的规则都会失效。
+    const list = parseYarnLockfile(`__metadata:
+  version: 8
+
+"node-pty@npm:^1.0.0":
+  version: 1.1.0
+
+"my-alias@npm:node-pty@^1.0.0":
+  version: 1.1.0
+`)
+    expect(list.map((p) => p.name)).toEqual(['node-pty', 'node-pty'])
+    expect(list.map((p) => p.version)).toEqual(['1.1.0', '1.1.0'])
+  })
 })
 
 describe('yarn 集成 · scan 真实 yarn.lock（零网络）', () => {
