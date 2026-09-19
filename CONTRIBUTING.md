@@ -20,6 +20,15 @@ enforces.
 - Use [Conventional Commits](https://www.conventionalcommits.org/):
   `feat: add pattern-a reverse lookup`
 
+## Security
+
+`npm run audit` checks the runtime dependency tree against npm's advisories — it
+is the step CI runs, and it pins the registry because the advisory endpoint only
+exists on `registry.npmjs.org`.
+
+A vulnerability in NativeCheck itself should not be reported in a public issue:
+see [SECURITY.md](./SECURITY.md).
+
 ## Fixture conventions
 
 ```yaml

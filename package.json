@@ -58,6 +58,7 @@
     "lint:fix": "eslint . --fix",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
+    "audit": "node scripts/audit.mjs",
     "rules:coverage": "node scripts/check-rule-coverage.mjs",
     "rules:coverage:strict": "node scripts/check-rule-coverage.mjs --strict",
     "prepublishOnly": "npm run typecheck && npm run test && npm run build"
