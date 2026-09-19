@@ -519,7 +519,6 @@ export function matchCandidate(input: MatchInput): PackageFinding {
     case DistributionPattern.SourceOnly: {
       // Pattern D always builds locally — this is where the full toolchain comparison is needed
       strategy = InstallStrategy.SourceBuild
-      risk = RiskLevel.MEDIUM
       requirements.push(
         { name: 'Python', versionRequirement: '>= 3.6', source: 'required by node-gyp' },
         { name: 'C/C++ compiler', source: 'node-gyp rebuild' },

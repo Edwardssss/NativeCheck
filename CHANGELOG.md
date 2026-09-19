@@ -10,8 +10,13 @@ are the parts meant to be depended on. Adapter internals live behind
 
 ## [Unreleased]
 
-Nothing yet — the entries below are the first release, still awaiting the tag
-that publishes them (see [Releasing](./CONTRIBUTING.md#releasing)).
+- The Node floor moves from 20.17 to **20.19** in `engines`: `eslint@10` requires
+  it, and `engine-strict` turns a mismatch into a failed install rather than a
+  warning. Node 20 remains supported.
+- Development toolchain: `eslint` / `@eslint/js` 10, `@types/node` 26,
+  `js-yaml` 5 (which ships its own types, so `@types/js-yaml` is gone).
+- Nothing is published yet: `0.1.0` below is waiting for the tag that publishes
+  it (see [Releasing](./CONTRIBUTING.md#releasing)).
 
 ## [0.1.0]
 
