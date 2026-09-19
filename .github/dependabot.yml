@@ -1,0 +1,26 @@
+version: 2
+
+updates:
+  # Runtime dependencies are what users install, so patch updates are worth
+  # taking early; majors arrive individually because @npmcli/arborist is npm's
+  # own library and its majors are not a public API contract.
+  - package-ecosystem: npm
+    directory: '/'
+    schedule:
+      interval: weekly
+      day: monday
+      time: '03:00'
+    open-pull-requests-limit: 5
+    groups:
+      dev-dependencies:
+        dependency-type: development
+        update-types: ['minor', 'patch']
+      runtime-patches:
+        dependency-type: production
+        update-types: ['patch']
+
+  # The workflows pin actions by major tag; this keeps those tags moving.
+  - package-ecosystem: github-actions
+    directory: '/'
+    schedule:
+      interval: monthly

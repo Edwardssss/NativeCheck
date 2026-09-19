@@ -6,6 +6,20 @@ on:
   pull_request:
 
 jobs:
+  # Runtime dependencies are what users install, so a known advisory in one of
+  # them is a release blocker. Checked once instead of per Node version, and
+  # without installing: `npm audit` only needs the lockfile.
+  audit:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      # `npm run audit` pins the registry on purpose: the audit endpoint exists
+      # on registry.npmjs.org, and mirrors do not implement it.
+      - run: npm run audit
+
   verify:
     runs-on: ubuntu-latest
     strategy:
