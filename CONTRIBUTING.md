@@ -69,3 +69,25 @@ more reliable than scraping build logs. See
 - Prettier owns formatting: run `npm run format` before committing
 - Ecosystem-specific logic belongs in `src/adapters/<ecosystem>/`; `src/core/`
   stays ecosystem-independent
+
+## Releasing
+
+1. Move the entries under `[Unreleased]` in [`CHANGELOG.md`](./CHANGELOG.md) to a
+   new version heading. The changelog is the release note; nothing generates one.
+2. `npm version <major|minor|patch>` — this bumps `package.json` and creates the
+   `vX.Y.Z` tag in one step, which is exactly the tag the workflow asserts
+   against.
+3. `git push --follow-tags`. The tag starts
+   [`.github/workflows/publish.yml`](./.github/workflows/publish.yml), which
+   re-runs every gate (lint, typecheck, coverage, rule coverage, format, build)
+   and publishes with provenance.
+4. Watch the run, then confirm the version and its attestation on npm.
+
+Authentication is npm **trusted publishing** (OIDC): no publishing token is
+stored in this repository. That requires a one-time entry on npmjs.com — package
+`nativecheck` → Settings → Trusted Publisher → GitHub Actions, naming this
+repository and `publish.yml`. If a token ever has to be used instead, put
+`NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}` back on the publish step.
+
+Prereleases should not move `latest`: `npm publish --tag next` (or `npm version
+prerelease --preid next`) keeps the stable tag untouched.
