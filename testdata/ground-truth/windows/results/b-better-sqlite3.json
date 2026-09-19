@@ -1,0 +1,31 @@
+﻿{
+  "cell": "b-better-sqlite3",
+  "package": "better-sqlite3",
+  "expected": "B/PREBUILDIFY",
+  "installExit": 0,
+  "timedOut": false,
+  "durationMs": 8899,
+  "compiled": false,
+  "buildAttempted": false,
+  "shimHits": 0,
+  "nodeBinaries": 8,
+  "prebuiltBinaries": 8,
+  "intermediates": 0,
+  "gypRan": true,
+  "platformPackages": [],
+  "prediction": {
+    "pattern": "Prebuildify",
+    "risk": "UNVERIFIED",
+    "strategy": "PREBUILT",
+    "compilerUsable": true,
+    "compilerVia": "D:\\VS2026\\VC\\Auxiliary\\Build\\vcvars64.bat",
+    "networkCalls": 0
+  },
+  "vcvars": "D:\\VS2026\\VC\\Auxiliary\\Build\\vcvars64.bat",
+  "logTail": [
+    "added 2 packages in 4s",
+    "NC_EXIT=0\r",
+    "npm http cache node-addon-api@https://registry.npmmirror.com/node-addon-api/-/node-addon-api-8.9.2.tgz 0ms (cache hit)",
+    "npm http cache better-sqlite3@https://registry.npmmirror.com/better-sqlite3/-/better-sqlite3-13.0.3.tgz 0ms (cache hit)"
+  ]
+}

@@ -1,0 +1,39 @@
+﻿{
+  "cell": "c-bcrypt",
+  "package": "bcrypt",
+  "expected": "C/REMOTE",
+  "installExit": 1,
+  "timedOut": false,
+  "durationMs": 36502,
+  "compiled": false,
+  "buildAttempted": true,
+  "shimHits": 0,
+  "nodeBinaries": 0,
+  "prebuiltBinaries": 0,
+  "intermediates": 0,
+  "gypRan": false,
+  "platformPackages": [],
+  "prediction": {
+    "pattern": "RemoteDownload",
+    "risk": "UNVERIFIED",
+    "strategy": "PREBUILT",
+    "compilerUsable": true,
+    "compilerVia": "D:\\VS2026\\VC\\Auxiliary\\Build\\vcvars64.bat",
+    "networkCalls": 0
+  },
+  "vcvars": "D:\\VS2026\\VC\\Auxiliary\\Build\\vcvars64.bat",
+  "logTail": [
+    "npm error node-pre-gyp ERR! stack Error: Failed to execute \u0027C:\\Users\\13015\\AppData\\Local\\nodejs\\node-v26.7.0-win-x64\\node.exe C:\\Users\\13015\\AppData\\Local\\nodejs\\node-v26.7.0-win-x64\\node_modules\\npm\\node_modules\\node-gyp\\bin\\node-gyp.js build --fallback-to-build --module=D:\\Desktop\\Lesson_File\\NativeCheck_recovered\\.tmp\\win-ground-truth\\c-bcrypt\\work\\node_modules\\bcrypt\\lib\\binding\\napi-v3\\bcrypt_lib.node --module_name=bcrypt_lib --module_path=D:\\Desktop\\Lesson_File\\NativeCheck_recovered\\.tmp\\win-ground-truth\\c-bcrypt\\work\\node_modules\\bcrypt\\lib\\binding\\napi-v3 --napi_version=10 --node_abi_napi=napi --napi_build_version=3 --node_napi_label=napi-v3\u0027 (1)",
+    "npm error node-pre-gyp ERR! stack     at ChildProcess.\u003canonymous\u003e (D:\\Desktop\\Lesson_File\\NativeCheck_recovered\\.tmp\\win-ground-truth\\c-bcrypt\\work\\node_modules\\@mapbox\\node-pre-gyp\\lib\\util\\compile.js:89:23)",
+    "npm error node-pre-gyp ERR! stack     at ChildProcess.emit (node:events:514:20)",
+    "npm error node-pre-gyp ERR! stack     at maybeClose (node:internal/child_process:1125:16)",
+    "npm error node-pre-gyp ERR! stack     at ChildProcess._handle.onexit (node:internal/child_process:305:5)",
+    "npm error node-pre-gyp ERR! System Windows_NT 10.0.19045",
+    "npm error node-pre-gyp ERR! command \"C:\\\\Users\\\\13015\\\\AppData\\\\Local\\\\nodejs\\\\node-v26.7.0-win-x64\\\\node.exe\" \"D:\\\\Desktop\\\\Lesson_File\\\\NativeCheck_recovered\\\\.tmp\\\\win-ground-truth\\\\c-bcrypt\\\\work\\\\node_modules\\\\@mapbox\\\\node-pre-gyp\\\\bin\\\\node-pre-gyp\" \"install\" \"--fallback-to-build\"",
+    "npm error node-pre-gyp ERR! cwd D:\\Desktop\\Lesson_File\\NativeCheck_recovered\\.tmp\\win-ground-truth\\c-bcrypt\\work\\node_modules\\bcrypt",
+    "npm error node-pre-gyp ERR! node -v v26.7.0",
+    "npm error node-pre-gyp ERR! node-pre-gyp -v v1.0.11",
+    "npm error node-pre-gyp ERR! not ok",
+    "npm error A complete log of this run can be found in: C:\\Users\\13015\\AppData\\Local\\npm-cache\\_logs\\2026-09-19T09_49_52_613Z-debug-0.log"
+  ]
+}

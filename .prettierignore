@@ -8,3 +8,6 @@ fixtures/README.md
 
 # Build artifacts (belt and braces; usually already covered by .gitignore)
 tsup.config.bundled_*.mjs
+
+# Windows ground-truth harness scratch (throwaway installs; results/ is committed)
+.tmp/

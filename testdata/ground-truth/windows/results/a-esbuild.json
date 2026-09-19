@@ -1,0 +1,31 @@
+﻿{
+  "cell": "a-esbuild",
+  "package": "esbuild",
+  "expected": "A/PREBUILT",
+  "installExit": 0,
+  "timedOut": false,
+  "durationMs": 7063,
+  "compiled": false,
+  "buildAttempted": false,
+  "shimHits": 0,
+  "nodeBinaries": 0,
+  "prebuiltBinaries": 0,
+  "intermediates": 0,
+  "gypRan": false,
+  "platformPackages": ["@esbuild\\win32-x64"],
+  "prediction": {
+    "pattern": "PlatformOptionalDeps",
+    "risk": "LOW",
+    "strategy": "PREBUILT",
+    "compilerUsable": true,
+    "compilerVia": "D:\\VS2026\\VC\\Auxiliary\\Build\\vcvars64.bat",
+    "networkCalls": 0
+  },
+  "vcvars": "D:\\VS2026\\VC\\Auxiliary\\Build\\vcvars64.bat",
+  "logTail": [
+    "added 2 packages in 2s",
+    "NC_EXIT=0\r",
+    "npm http cache @esbuild/win32-x64@https://registry.npmmirror.com/@esbuild/win32-x64/-/win32-x64-0.25.0.tgz 1ms (cache hit)",
+    "npm http cache esbuild@https://registry.npmmirror.com/esbuild/-/esbuild-0.25.0.tgz 0ms (cache hit)"
+  ]
+}

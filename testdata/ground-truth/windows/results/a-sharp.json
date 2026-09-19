@@ -1,0 +1,39 @@
+﻿{
+  "cell": "a-sharp",
+  "package": "sharp",
+  "expected": "A/PREBUILT",
+  "installExit": 0,
+  "timedOut": false,
+  "durationMs": 6841,
+  "compiled": false,
+  "buildAttempted": false,
+  "shimHits": 0,
+  "nodeBinaries": 1,
+  "prebuiltBinaries": 0,
+  "intermediates": 0,
+  "gypRan": false,
+  "platformPackages": ["@img\\sharp-win32-x64"],
+  "prediction": {
+    "pattern": "PlatformOptionalDeps",
+    "risk": "LOW",
+    "strategy": "PREBUILT",
+    "compilerUsable": true,
+    "compilerVia": "D:\\VS2026\\VC\\Auxiliary\\Build\\vcvars64.bat",
+    "networkCalls": 0
+  },
+  "vcvars": "D:\\VS2026\\VC\\Auxiliary\\Build\\vcvars64.bat",
+  "logTail": [
+    "added 10 packages in 2s",
+    "NC_EXIT=0\r",
+    "npm http cache simple-swizzle@https://registry.npmmirror.com/simple-swizzle/-/simple-swizzle-0.2.4.tgz 0ms (cache hit)",
+    "npm http cache sharp@https://registry.npmmirror.com/sharp/-/sharp-0.34.0.tgz 0ms (cache hit)",
+    "npm http cache semver@https://registry.npmmirror.com/semver/-/semver-7.8.5.tgz 0ms (cache hit)",
+    "npm http cache is-arrayish@https://registry.npmmirror.com/is-arrayish/-/is-arrayish-0.3.4.tgz 0ms (cache hit)",
+    "npm http cache color-name@https://registry.npmmirror.com/color-name/-/color-name-1.1.4.tgz 0ms (cache hit)",
+    "npm http cache detect-libc@https://registry.npmmirror.com/detect-libc/-/detect-libc-2.1.2.tgz 0ms (cache hit)",
+    "npm http cache color-string@https://registry.npmmirror.com/color-string/-/color-string-1.9.1.tgz 0ms (cache hit)",
+    "npm http cache color-convert@https://registry.npmmirror.com/color-convert/-/color-convert-2.0.1.tgz 0ms (cache hit)",
+    "npm http cache @img/sharp-win32-x64@https://registry.npmmirror.com/@img/sharp-win32-x64/-/sharp-win32-x64-0.34.0.tgz 0ms (cache hit)",
+    "npm http cache color@https://registry.npmmirror.com/color/-/color-4.2.3.tgz 0ms (cache hit)"
+  ]
+}

@@ -40,3 +40,6 @@ testdata/ground-truth/out/
 # Python bytecode caches (produced when collect.py syntax-checks)
 __pycache__/
 *.pyc
+
+# Windows ground-truth harness scratch output (throwaway installs; results/ is committed)
+.tmp/
