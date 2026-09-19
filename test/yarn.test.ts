@@ -89,10 +89,10 @@ describe('parseYarnLockfile (v1 classic)', () => {
     const bs = byName.get('better-sqlite3')
     expect(bs?.dependencies?.['bindings']).toEqual({ name: 'bindings' })
     expect(bs?.dependencies?.['prebuild-install']).toEqual({ name: 'prebuild-install' })
-    // yarn records no install scripts, so the flag must stay `false` here: the
-    // adapter has no equivalent field to read (pnpm has requiresBuild, yarn has
-    // nothing), and `undefined` would be read as "unknown" downstream.
-    expect(bs?.hasInstallScript).toBe(false)
+    // yarn records no install scripts, so the flag must stay "not recorded" (undefined)
+    // rather than "recorded as absent" (false): false would silently collapse D (compiles
+    // at install time) into B (prebuilt in the tarball), and B under fast mode reads as
+    expect(bs?.hasInstallScript).toBeUndefined()
   })
 
   it('empty / not a lockfile → empty list (fail closed)', () => {
@@ -118,8 +118,8 @@ describe('parseYarnLockfile (Berry __metadata)', () => {
 
   it('an alias key (alias@npm:real@range) resolves to the real package name', () => {
     // Berry writes aliases as `"my-alias@npm:node-pty@^1.0.0"`, and the entry describes
-    // node-pty itself (tarball, install script, build-tool dependencies all come from it).
-    // Leaving the alias shell on would yield `my-alias@npm:node-pty`, and every rule that
+    // node-pty itself (tarball, install script and build-tool dependencies all come from
+    // it). Leaving the alias shell on would yield `my-alias@npm:node-pty`, and every rule
     const list = parseYarnLockfile(`__metadata:
   version: 8
 
@@ -164,8 +164,8 @@ describe('yarn integration · scan against a real yarn.lock (zero network)', () 
     const bs = report.findings.find((f) => f.pkg.name === 'better-sqlite3')
     expect(bs?.pattern).toBe('RemoteDownload')
 
-    // Berry has no optionalDependencies → an esbuild-style pattern A cannot appear.
-    // That is a documented limit of the Berry lockfile, not a false positive.
+    // Berry has no optionalDependencies → an esbuild-style pattern A cannot appear;
+    // that is a documented limit of the Berry lockfile, not a false positive.
     const esbuild = report.findings.find((f) => f.pkg.name === 'esbuild')
     expect(esbuild).toBeUndefined()
   })

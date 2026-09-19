@@ -414,6 +414,14 @@ export function matchCandidate(input: MatchInput): PackageFinding {
         // fast (no verify) → no network → honestly UNVERIFIED, never guess
         risk = RiskLevel.UNVERIFIED
         needsVerify = true
+        if (pkg.hasInstallScript === undefined) {
+          // The *lockfile* cannot tell us either: this format records
+          // resolutions, not build scripts. Say so explicitly — otherwise the
+          // user reads "needs --deep to inspect the tarball" and never learns
+          // that the discriminator was never in the file to begin with.
+          resolveHintOverride =
+            'this lockfile format records no install scripts (pnpm < 9 / yarn), so B and D cannot be told apart offline; --deep reads the tarball and decides'
+        }
         chain.push(
           evidence(
             'remote-artifact-http',

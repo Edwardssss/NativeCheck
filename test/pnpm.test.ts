@@ -3,7 +3,9 @@
  */
 import { describe, expect, it } from 'vitest'
 import { parsePnpmLockfile } from '../src/adapters/node/pnpm'
+import { classifyPackage } from '../src/adapters/node/classify'
 import { scan } from '../src/adapters/node/pipeline'
+import { DistributionPattern } from '../src/core/model'
 import type { Environment } from '../src/core/model'
 import { fileURLToPath } from 'node:url'
 import { join } from 'node:path'
@@ -96,7 +98,7 @@ describe('parsePnpmLockfile', () => {
 
   it('a peer suffix in a snapshot key does not pollute name / version', () => {
     // In a real pnpm v6+ lockfile every package with peers is keyed as
-    // `name@version(peer@version)`. Splitting at the first @ would yield
+    // `name@version(peer@version)`. Splitting at the last @ would yield
     const PEER = `lockfileVersion: '9.0'
 
 packages:
@@ -145,13 +147,38 @@ describe('pnpm integration · scan against a real pnpm-lock.yaml', () => {
     expect(names).toContain('node-pty')
   })
 
-  it('without hasInstallScript node-pty is Prebuildify (B), not the SourceOnly (D) npm reports', async () => {
-    // Documented limitation: pnpm-lock.yaml does not record hasInstallScript, so the
-    // "node-addon-api + install script" signal for D is missing and node-pty degrades to B.
-    // That costs determinism (fast → UNVERIFIED) but never reports a false all-clear.
+  it('no requiresBuild on pnpm → not recorded (undefined), never "recorded as absent" (false)', async () => {
+    // `false` would assert "this package has no install script", and pnpm does not promise
+    // to write requiresBuild for every package that needs a build (our own v9 fixture omits
+    // it for node-pty, which does run node-gyp rebuild). Asserting false collapses D
+    // (compiles at install time) into B (prebuilt inside the tarball), and B under fast mode
+    // reads as a benign result — a false negative presented as a safe one.
     const { report } = await scan(pnpmRoot, { mode: 'fast', env })
     const nodePty = report.findings.find((f) => f.pkg.name === 'node-pty')
     expect(nodePty?.pattern).toBe('Prebuildify')
+    // The signal is missing, so determinism drops: UNVERIFIED, never LOW.
     expect(nodePty?.risk).toBe('UNVERIFIED')
+    expect(nodePty?.pkg.raw.hasInstallScript).toBeUndefined()
+  })
+
+  it('requiresBuild: true → the D/B split comes back offline instead of waiting for --deep', async () => {
+    const withFlag = SAMPLE.replace(
+      '  node-pty@1.1.0:\n    resolution: {integrity: sha512-pty, tarball: https://registry.npmjs.org/node-pty/-/node-pty-1.1.0.tgz}',
+      '  node-pty@1.1.0:\n    resolution: {integrity: sha512-pty, tarball: https://registry.npmjs.org/node-pty/-/node-pty-1.1.0.tgz}\n    requiresBuild: true',
+    )
+    expect(withFlag).not.toBe(SAMPLE)
+    const nodePty = parsePnpmLockfile(withFlag).find((p) => p.name === 'node-pty')
+    expect(nodePty?.hasInstallScript).toBe(true)
+    // node-addon-api plus a recorded install script means compiling at install time, not a prebuilt tarball.
+    expect(classifyPackage(nodePty!)).toBe(DistributionPattern.SourceOnly)
+  })
+
+  it('requiresBuild: false is also just "not recorded", and never read as "has a script"', () => {
+    const withFlag = SAMPLE.replace(
+      '  node-addon-api@7.1.1:',
+      '  node-addon-api@7.1.1:\n    requiresBuild: false',
+    )
+    const pkg = parsePnpmLockfile(withFlag).find((p) => p.name === 'node-addon-api')
+    expect(pkg?.hasInstallScript).toBeUndefined()
   })
 })
