@@ -39,5 +39,7 @@ export const RISK_META: Record<RiskLevel, RiskMeta> = {
 }
 
 /* Risk severity ordering / project-level aggregation are implemented where they
- * are used: `report.ts` builds `byRisk` and `render.ts` lists them by severity.
- * Keeping a parallel SEVERITY/worstRisk/RISK_DISPLAY_ORDER here would be dead code. */
+ * are used: `report.ts` builds `byRisk` and `render.ts` lists every level,
+ * including the gray UNVERIFIED / AMBIGUOUS pair — the counts must add up to
+ * `nativeCandidates`. Keeping a parallel SEVERITY/worstRisk/RISK_DISPLAY_ORDER
+ * here would be dead code. */

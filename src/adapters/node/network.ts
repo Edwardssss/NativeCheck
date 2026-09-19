@@ -615,7 +615,7 @@ export async function probePrebuilds(
 
   const res = await fetchImpl(tarballUrl, { signal: ac.signal })
   if (!res.ok || !res.body) {
-    throw new Error(`tarball HEAD: HTTP ${res.status}`)
+    throw new Error(`tarball GET: HTTP ${res.status}`)
   }
 
   const observed: string[] = []

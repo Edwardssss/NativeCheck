@@ -99,7 +99,9 @@ async function runExplain(query: string): Promise<void> {
   const single: ScanReport = {
     ...report,
     findings: [hit],
-    summary: summarize([hit], 1, 0),
+    // Keep the project's real package total: reporting "1 packages" for a project
+    // with hundreds of dependencies is just wrong at the top of the block.
+    summary: summarize([hit], report.summary.totalPackages, 0),
   }
   console.log(renderReport(single))
 }

@@ -116,7 +116,14 @@ export interface ScanReport {
   readonly unsupported?: UnsupportedProject
 }
 
-/** Aggregate by risk level. SUSPICIOUS is excluded from the statistics. */
+/**
+ * Aggregate by risk level.
+ *
+ * An unresolved SUSPICIOUS finding is counted under `AMBIGUOUS`: it must show up
+ * in the totals (otherwise the categories stop adding up to `nativeCandidates`),
+ * it just never inflates HIGH — that is what "excluded from the risk statistics"
+ * means here.
+ */
 export function summarize(
   findings: readonly PackageFinding[],
   totalPackages: number,
