@@ -136,7 +136,9 @@ export function renderEnvironment(env: Environment): string {
     lines.push(`  Python ${env.python.version}${env.python.path ? ` (${env.python.path})` : ''}`)
   if (env.compiler) {
     lines.push(
-      `  C/C++ ${env.compiler.name}${env.compiler.version ? ` ${env.compiler.version}` : ''}`,
+      `  C/C++ ${env.compiler.name}${env.compiler.version ? ` ${env.compiler.version}` : ''}${
+        env.compiler.path ? ` (${env.compiler.path})` : ''
+      }`,
       `    C probe  ${env.compiler.cProbe ? '✓ 可编译' : '✗ 失败'}`,
       `    C++ probe ${env.compiler.cxxProbe ? '✓ 可编译' : '✗ 失败'}`,
     )
