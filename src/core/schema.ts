@@ -118,6 +118,7 @@ export const compilerInfoSchema = z.object({
   path: z.string().optional(),
   cProbe: z.boolean(),
   cxxProbe: z.boolean(),
+  viaToolchainEnv: z.string().optional(),
 })
 
 export const sdkSchema = z.object({

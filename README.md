@@ -179,8 +179,10 @@ reliable than scraping logs).
 
 > On Windows, `cl.exe` is on `PATH` but cannot compile from a plain shell — it
 > needs `INCLUDE` / `LIB`, which only a Developer Command Prompt or `vcvars64.bat`
-> provides. The compiler probe reports what it actually found rather than
-> assuming a working toolchain.
+> provides. When the plain probe fails, NativeCheck asks Visual Studio's own
+> installer (`vswhere.exe`) where it lives, captures that environment and probes
+> again, then reports the script it used. Without a toolchain environment it
+> reports what it found rather than assuming a working compiler.
 
 ## Project layout
 
