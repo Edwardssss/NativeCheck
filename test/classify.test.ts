@@ -1,5 +1,5 @@
 /**
- * Layer 1 classifier — the core rule table (design doc §10.2).
+ * Layer 1 classifier — the core rule table.
  *
  * These fixtures test pure functions: no real lockfile is generated, hand-written
  * LockfilePackage records are fed in directly. In the spirit of

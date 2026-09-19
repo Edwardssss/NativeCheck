@@ -1,5 +1,5 @@
 /**
- * Install script semantic parsing — the core of false-positive control (design doc §11.2).
+ * Install script semantic parsing — the core of false-positive control.
  *
  * Observed samples:
  *   esbuild  `node install.js`                              → select (no compile)

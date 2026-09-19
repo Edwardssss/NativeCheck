@@ -6,7 +6,7 @@
 #
 # Note (2026-09-05): deasync installs with `node ./build.js`, which first looks for the
 # `bin/{plat}-{arch}-node-{v}/deasync.node` prebuilt binary bundled in its own tarball and
-# skips the build when it is there (bundled-prebuilt-first, see known-blindspots §1.5). L1 only
+# skips the build when it is there (bundled-prebuilt-first). L1 only
 # sees bindings + node-addon-api + hasInstallScript in the lockfile and cannot read the script
 # body, so SourceOnly is the correct L1 output. It also means deasync's "really compiled or
 # not" cannot be told apart at L1 — which is a limit of the signal, not of the classifier.

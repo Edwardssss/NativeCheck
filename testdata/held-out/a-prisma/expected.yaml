@@ -11,7 +11,7 @@
 # This is a KNOWN held-out gap, not a regression. Pattern A detection works
 # when the cluster lives on the entry package itself (esbuild, sharp, swc);
 # when it lives one hop deeper, L1 needs a transitive optional-dep walk.
-# See temp/known-blindspots.md §2 for the typed-out mitigation plan.
+# It packages its engines itself, which is why the plan is typed out below.
 pattern: NotNative
 strategy: UNKNOWN
 risk: AMBIGUOUS

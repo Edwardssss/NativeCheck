@@ -1,7 +1,7 @@
 /**
  * System library detection (Linux-first, zero network).
  *
- * The design doc §19.2 originally declared system-library enumeration
+ * System-library probing by design enumerates nothing ahead of time,
  * unrealistic because `-dev` package names differ per distribution. This module
  * is the pragmatic middle ground: a **curated** list of high-frequency
  * libraries probed with a single `pkg-config --list-all` subprocess call.
@@ -10,7 +10,7 @@
  * `libpq-dev` / `libpcap-dev`" — WITHOUT trying to enumerate everything. The
  * result is **advisory**: `pkg-config` absence is weak evidence (a library may
  * be present without a `.pc` file, or the package may bundle it), so it never
- * turns into a blocker or a HIGH risk level (ADR-001: do not predict install
+ * turns into a blocker or a HIGH risk level (never predict install
  * success).
  */
 

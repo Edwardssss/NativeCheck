@@ -1,7 +1,7 @@
 /**
  * Semantic parsing of install scripts.
  *
- * Maps to design doc §11.2 — **the core of false-positive control**.
+ * Parses install scripts into intents — **the core of false-positive control**.
  *
  * Central trap: `node-gyp-build` ≠ `node-gyp`.
  * The former is a zero-dependency runtime binary picker, the latter is a

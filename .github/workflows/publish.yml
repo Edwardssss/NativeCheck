@@ -6,7 +6,7 @@ name: publish
 # version — the job asserts this before publishing to prevent a version skew.
 #
 # Provenance requires the OIDC token (`id-token: write`), which proves the
-# tarball was built by this exact workflow on the official repo. See doc/RELEASE.md.
+# tarball was built by this exact workflow on the official repository.
 
 on:
   push:

@@ -1,6 +1,6 @@
 name: ground-truth
 
-# Ground Truth Docker matrix (design doc §13): real npm installs + a compiler
+# Ground Truth Docker matrix: real npm installs plus a compiler-wrapper
 # wrapper, producing L1/L2/L3 accuracy numbers to catch rule decay. Slow,
 # independent from the main CI, scheduled weekly + manual trigger.
 #
@@ -61,7 +61,7 @@ jobs:
           out=$(python3 testdata/ground-truth/collect.py testdata/ground-truth/out --blockers 2>&1)
           echo "$out"
           # Extract the FN rate; anything above 5% fails (FN is the most severe
-          # error class, weighted ×2 per design doc §13.3)
+          # error class, weighted x2)
           rate=$(echo "$out" | sed -n 's/.*L2 FN miss rate=\([0-9.]*\)%.*/\1/p' | head -1)
           if [ -n "$rate" ] && awk "BEGIN{exit !($rate > 5)}"; then
             echo "::error::L2 FN miss rate ${rate}% exceeds the 5% threshold"

@@ -1,5 +1,5 @@
 /**
- * Layer 3 Match (design doc §10.4) plus reliability / risk aggregation helpers.
+ * Layer 3 Match plus the reliability / risk aggregation helpers.
  */
 import { describe, expect, it } from 'vitest'
 import { matchCandidate } from '../src/adapters/node/match'

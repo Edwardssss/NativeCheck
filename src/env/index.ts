@@ -1,7 +1,7 @@
 /**
  * Environment scan aggregation entry point.
  *
- * Maps to design doc §10.4 "Environment scanning and compiler probes".
+ * Environment scanning and compiler probes.
  */
 
 import type { Environment } from '../core/model'

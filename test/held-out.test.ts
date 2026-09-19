@@ -12,7 +12,7 @@
  * `networkCalls === 0`.
  *
  * Coverage today: 31 packages across A/B/C/D/NotNative/BuildTool categories.
- * Meets the H1 target of >= 30 (see `temp/NativeCheck_improvement-method-assessment.md` H1).
+ * Meets the target of >= 30 held-out packages.
  */
 import { describe, expect, it } from 'vitest'
 import { readdirSync, readFileSync } from 'node:fs'
