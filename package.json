@@ -65,7 +65,7 @@
   },
   "dependencies": {
     "@hyrious/bun.lockb": "^0.0.4",
-    "@npmcli/arborist": "^9.9.1",
+    "@npmcli/arborist": "^10.0.2",
     "citty": "^0.2.2",
     "cli-table3": "^0.6.5",
     "consola": "^3.4.2",
