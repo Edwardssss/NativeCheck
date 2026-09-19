@@ -107,6 +107,26 @@ export function probeLockfile(projectRoot: string): {
   return { supported: true, detected: 'npm (package-lock.json)', version }
 }
 
+/** Max chains kept per package: enough to show the real entry points, not every path. */
+const MAX_PATHS_PER_PACKAGE = 3
+/** Depth cap — dependency trees are shallow, but hostile/huge lockfiles are not. */
+const MAX_PATH_DEPTH = 12
+
+/** Append a chain for a package, de-duplicating and capping the list. */
+function recordChain(chains: Map<string, string[][]>, key: string, path: readonly string[]): void {
+  const existing = chains.get(key)
+  if (!existing) {
+    chains.set(key, [[...path]])
+    return
+  }
+  if (existing.length >= MAX_PATHS_PER_PACKAGE) return
+  if (
+    existing.some((chain) => chain.length === path.length && chain.every((n, i) => n === path[i]))
+  )
+    return
+  existing.push([...path])
+}
+
 /**
  * Whether npm would treat this node as an *optional* dependency: every incoming
  * edge is declared in the parent's `optionalDependencies`.
@@ -266,20 +286,57 @@ export async function ingest(projectRoot: string): Promise<IngestOutcome> {
     }
   }
 
-  const list: LockfilePackage[] = []
-  const seen = new Set<string>()
-  const visit = (node: Node, isRoot: boolean): void => {
+  const records = new Map<string, { record: LockfilePackage; isRoot: boolean }>()
+  // Real root → target chains, keyed by `name@version`. The normalized record
+  // used to carry `[[own name]]`, which made the report's "Dependency path" block
+  // echo the package name instead of answering "who brought native in".
+  const chains = new Map<string, string[][]>()
+  /**
+   * Depth-first walk from the tree root, carrying the ancestor chain.
+   *
+   * A node reached twice keeps the first chain for its own expansion and just
+   * records the additional path (dependency chains grow combinatorially; keeping
+   * every path to every node would blow up on large lockfiles). Re-entering a
+   * name already on the current chain is a cycle — stop, don't recurse.
+   */
+  const visit = (
+    node: Node,
+    isRoot: boolean,
+    chain: readonly string[],
+    visitedKeys: readonly string[],
+  ): void => {
     if (!node.name) return
     const key = `${node.name}@${node.version ?? ''}`
-    if (seen.has(key)) return
-    seen.add(key)
-    const record = fromArboristNode(node)
-    if (record) list.push({ ...record, ...(isRoot ? { isRoot: true } : {}) })
+    const path = [...chain, node.name]
+    const pathKeys = [...visitedKeys, key]
+    const record = records.get(key)
+    if (record) {
+      recordChain(chains, key, path)
+      return
+    }
+    chains.set(key, [path])
+    const parsed = fromArboristNode(node)
+    if (parsed) records.set(key, { record: parsed, isRoot })
+    if (path.length >= MAX_PATH_DEPTH) return
     for (const [, edge] of node.edgesOut ?? new Map()) {
-      if (edge.to) visit(edge.to, false)
+      const child = edge.to
+      if (!child?.name) continue
+      // Cycle guard on `name@version`, NOT on the bare name: the root node is
+      // named after the project folder (arborist uses @npmcli/name-from-folder),
+      // so a name-based guard silently drops every dependency that shares the
+      // project's name — e.g. a fixture directory called `zlib-sync`.
+      const childKey = `${child.name}@${child.version ?? ''}`
+      if (pathKeys.includes(childKey)) continue
+      visit(child, false, path, pathKeys)
     }
   }
-  visit(tree, true)
+  visit(tree, true, [], [])
+
+  const list: LockfilePackage[] = [...records].map(([key, entry]) => ({
+    ...entry.record,
+    pathChains: chains.get(key) ?? [[entry.record.name]],
+    ...(entry.isRoot ? { isRoot: true } : {}),
+  }))
 
   return { ok: true, graph: indexPackages(list), format: probe.detected }
 }

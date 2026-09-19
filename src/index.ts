@@ -19,7 +19,6 @@ export { scanTarget, parsePackageSpec } from './adapters/node/target'
 export {
   classifyGraph,
   classifyPackage,
-  dependsOnBuildTool,
   matchesPlatform,
   verdictFor,
 } from './adapters/node/classify'
