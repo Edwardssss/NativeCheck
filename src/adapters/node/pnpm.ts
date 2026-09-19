@@ -8,13 +8,20 @@
  *   snapshots: `name@version` → resolved dependency graph (dependencies /
  *              optionalDependencies with exact versions)
  *
- * Known limitation (documented in temp/known-blindspots.md §5): pnpm's lockfile
- * does NOT record `hasInstallScript` (unlike npm's package-lock.json). The
- * S2 "install script" signal is therefore absent on pnpm — packages that only
- * differ by "node-addon-api + install script" (Pattern D vs B) collapse to
- * Pattern B on pnpm. This lowers determinism (→ UNVERIFIED in fast mode) but
- * does NOT misreport native as safe: `--deep` still forensically probes the
- * tarball for B candidates.
+ * Install-script signal (S2). pnpm does not record npm's `hasInstallScript`,
+ * but lockfile v9 does carry the *equivalent* fact for the packages pnpm decided
+ * to build: `packages.<key>.requiresBuild: true`. So the signal is partly
+ * recoverable rather than lost:
+ *
+ *   requiresBuild === true  → `hasInstallScript: true` (Replay-grade)
+ *   anything else           → `undefined` — **not recorded**
+ *
+ * Absence is deliberately never read as `false`. `false` would assert "this
+ * package has no install script", and pnpm does not promise to emit the flag for
+ * every package that needs one (our own v9 fixture omits it for node-pty, which
+ * has `node-gyp rebuild`). Asserting it would collapse Pattern D (compiles at
+ * install time) into Pattern B (prebuilt ships in the tarball), and B in fast
+ * mode reads as a benign result — a false negative presented as a safe one.
  */
 import { load } from 'js-yaml'
 import type { LockfileDependency, LockfilePackage } from './signals'
@@ -25,6 +32,8 @@ interface PnpmPackageMeta {
   cpu?: string[]
   libc?: string[]
   hasBin?: boolean
+  /** pnpm v9+: whether pnpm will run this package's build scripts. */
+  requiresBuild?: boolean
 }
 
 interface PnpmSnapshot {
@@ -125,8 +134,9 @@ export function parsePnpmLockfile(content: string): LockfilePackage[] {
       os: meta.os,
       cpu: meta.cpu,
       libc: meta.libc,
-      // pnpm lockfile has no hasInstallScript field — see the module header.
-      hasInstallScript: false,
+      // See the module header: `true` is a recorded fact, absence is not a
+      // recorded absence.
+      ...(meta.requiresBuild === true ? { hasInstallScript: true } : {}),
       dependencies: Object.keys(dependencies).length > 0 ? dependencies : undefined,
       pathChains: [[name]],
     })

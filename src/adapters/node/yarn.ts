@@ -24,11 +24,14 @@
  *     future S1 comparison; classify only needs the optional-edge count today)
  *   - hasInstallScript                                   → NOT recorded by yarn
  *
- * Known limitation (mirrors pnpm): yarn does not record `hasInstallScript`, so
- * on yarn the S2 signal is absent; packages that only differ by "node-addon-api
- * + install script" (Pattern D vs B) collapse toward B/NotNative on yarn. This
- * lowers determinism (→ UNVERIFIED in fast mode) but never misreports native
- * as safe.
+ * Install-script signal (S2): absent, and unlike pnpm there is no equivalent
+ * field to recover it from — a yarn lockfile records resolutions, not build
+ * scripts. The normalized record therefore leaves `hasInstallScript`
+ * **undefined** ("not recorded") rather than `false` ("recorded as absent").
+ * The distinction is the whole point: `false` would silently collapse Pattern D
+ * (compiles at install time) into Pattern B (prebuilt ships in the tarball), and
+ * B in fast mode reads as a benign result. `undefined` keeps the candidate
+ * reportable and defers B-vs-D to `--deep`, which reads the tarball.
  */
 import type { LockfileDependency, LockfilePackage } from './signals'
 
@@ -188,7 +191,8 @@ export function parseYarnLockfile(content: string): LockfilePackage[] {
       name,
       // Prefer the explicit version field over the range found in the key.
       version: entry.version ?? (version !== 'unknown' ? version : 'unknown'),
-      hasInstallScript: false, // yarn does not record install scripts.
+      // yarn does not record install scripts — `undefined` means "not recorded",
+      // not "no install script". See the module header.
       dependencies: Object.keys(deps).length > 0 ? deps : undefined,
       pathChains: [[name]],
     })
