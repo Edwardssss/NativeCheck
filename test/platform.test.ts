@@ -62,7 +62,7 @@ function clusterParent(
   })
 }
 
-describe('matchesPlatform · replays npm\'s own os / cpu / libc gate', () => {
+describe("matchesPlatform · replays npm's own os / cpu / libc gate", () => {
   it('no constraint → always matches', () => {
     expect(matchesPlatform({}, linuxEnv)).toBe(true)
     expect(matchesPlatform({ os: [], cpu: [] }, winEnv)).toBe(true)
@@ -211,7 +211,9 @@ describe('matchCandidate · pattern A uses sub-package constraints instead of gu
     })
     expect(finding.risk).toBe(RiskLevel.UNVERIFIED)
     expect(finding.resolveHint).toContain('package-lock-only')
-    const hint = finding.evidence.find((e) => e.description.includes('none of the optional sub-packages'))
+    const hint = finding.evidence.find((e) =>
+      e.description.includes('none of the optional sub-packages'),
+    )
     expect(hint?.description).toContain('darwin-arm64')
   })
 
