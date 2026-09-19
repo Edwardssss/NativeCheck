@@ -42,8 +42,8 @@ jobs:
           - { node: '22', libc: musl }
           - { node: '24', libc: musl }
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
         with:
           node-version: '22'
           cache: npm
@@ -71,7 +71,7 @@ jobs:
         run: python3 testdata/ground-truth/collect.py testdata/ground-truth/out --blockers --gate
 
       - name: Upload artifacts
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         if: always()
         with:
           name: ground-truth-${{ matrix.cell.node }}-${{ matrix.cell.libc }}
@@ -91,8 +91,8 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 30
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
         with:
           node-version: '24'
           cache: npm
@@ -109,7 +109,7 @@ jobs:
         run: python3 testdata/ground-truth/collect.py testdata/ground-truth/out --blockers --gate
 
       - name: Upload artifacts
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         if: always()
         with:
           name: ground-truth-pr-cell
