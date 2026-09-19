@@ -169,15 +169,21 @@ containers, with compiler wrappers deciding whether a local compile actually
 happened (C / C++ must go through `cc` / `g++` to produce a `.node`, which is more
 reliable than scraping logs).
 
-| Metric                                                                     | Result                                                            |
-| -------------------------------------------------------------------------- | ----------------------------------------------------------------- |
-| Platform matrix                                                            | Linux glibc + musl × Node 20 / 22 / 24, six cells, full runs      |
-| Full matrix (68 installable fixtures × 6 environments ≈ 408 real installs) | L2 FN 0.00%, FP 3.08%, deterministic coverage 98.2%               |
-| L1 native detection                                                        | covered by unit tests over fixtures (66 native) + held-out (40)   |
-| Automated tests                                                            | 371 cases across 21 files (vitest)                                |
-| Generalization                                                             | 40 real packages held out from the benchmark set                  |
-| Windows                                                                    | native cells in `testdata/ground-truth/windows/` (see its README) |
+| Metric                                                                     | Result                                                          |
+| -------------------------------------------------------------------------- | --------------------------------------------------------------- |
+| Platform matrix                                                            | Linux glibc + musl × Node 20 / 22 / 24, six cells, full runs    |
+| Full matrix (68 installable fixtures × 6 environments ≈ 408 real installs) | L2 FN 0.00%, FP 3.08%, deterministic coverage 98.2%             |
+| L1 native detection                                                        | covered by unit tests over fixtures (66 native) + held-out (40) |
+| Automated tests                                                            | 453 cases across 27 files (vitest)                              |
+| Generalization                                                             | 40 real packages held out from the benchmark set                |
+| Windows                                                                    | six native cells, measured without Docker (see its README)      |
 
+> The Linux numbers come from the last full matrix run under
+> `testdata/ground-truth/`, where the measurement and the prediction both happen
+> inside the target container. The Windows cells are measured natively, and that
+> README records the machine, the date and the caveats — including the one that
+> matters most today: on Node ≥ 22 a source-build cell stops at the link step,
+> where `common.gypi` passes clang-cl-only flags to MSVC's `link.exe`.
 > `fixtures/` holds 72 samples (66 native + 2 non-native controls + 4 format
 > controls). The 4 format controls (lockfile v1 and malformed pnpm / yarn / bun)
 > should never be installed, so 68 installable samples go into the matrix.
