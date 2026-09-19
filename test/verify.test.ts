@@ -630,6 +630,12 @@ describe('buildFindings · deep on-disk cache', () => {
         return v
       },
       writeFile: async (p, d) => void disk.set(p, d),
+      rename: async (from, to) => {
+        const v = disk.get(from)
+        if (v === undefined) throw new Error('ENOENT')
+        disk.set(to, v)
+        disk.delete(from)
+      },
       mkdir: async () => undefined,
       now: () => now,
     }
