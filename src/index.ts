@@ -12,6 +12,7 @@ export * from './core/evidence'
 export * from './core/risk'
 export * from './core/report'
 export * from './core/schema'
+export * from './core/gate'
 
 // Node adapter public API
 export { scan, buildFindings } from './adapters/node/pipeline'

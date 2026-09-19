@@ -25,10 +25,19 @@
  */
 import pc from 'picocolors'
 import { resolve } from 'node:path'
+import { readFileSync } from 'node:fs'
 import { parseArgs } from 'citty'
 import { scanEnvironment } from '../env'
-import { renderEnvironment, renderReport } from './render'
+import { renderEnvironment, renderGate, renderReport } from './render'
 import { summarize, type ScanReport } from '../core/report'
+import {
+  evaluateGate,
+  FAIL_ON_LEVELS,
+  parseBaseline,
+  parseIgnoreList,
+  matchesIgnore,
+  type FailOn,
+} from '../core/gate'
 
 /** Flag definitions for scan (citty, type-safe). */
 const SCAN_ARGS = {
@@ -38,7 +47,20 @@ const SCAN_ARGS = {
     description: 'fetch remote artifacts to verify patterns B / C',
   },
   json: { type: 'boolean' as const, description: 'emit machine-readable JSON' },
-  ci: { type: 'boolean' as const, description: 'CI mode: exit non-zero on blockers or HIGH risk' },
+  ci: { type: 'boolean' as const, description: 'CI mode: exit non-zero when the gate fails' },
+  ignore: {
+    type: 'string' as const,
+    description:
+      'comma-separated package names (supports *), marked ignored and kept out of the gate',
+  },
+  'fail-on': {
+    type: 'string' as const,
+    description: 'CI failure threshold: blocker (default) | high | medium | never',
+  },
+  baseline: {
+    type: 'string' as const,
+    description: 'compare against a previous --json report and fail only on new or worse findings',
+  },
   cache: {
     type: 'boolean' as const,
     default: true,
@@ -55,24 +77,53 @@ const SCAN_ARGS = {
 const HELP = `${pc.bold('nativecheck')} — ${pc.dim('local-first native dependency compatibility diagnostics')}
 
 Usage:
-  nativecheck [dir] [--deep] [--json] [--ci]           scan a project (default: .)
-  nativecheck [dir] --deep --no-cache                  deep scan without reading or writing the cache
-  nativecheck env                                      environment check-up
-  nativecheck explain <pkg>                            evidence chain for one native candidate
-  nativecheck target <pkg>[@version] [--deep] [--json] diagnose one package (no lockfile / Docker needed)
-  nativecheck --help                                   show this help`
+  nativecheck [dir] [--deep] [--json] [--ci]                scan a project (default: .)
+  nativecheck [dir] --ci --fail-on <level> --ignore <pkgs>  CI gate (add --baseline to fail only on new findings)
+  nativecheck [dir] --deep --no-cache                       deep scan without reading or writing the cache
+  nativecheck env                                           environment check-up
+  nativecheck explain <pkg>                                 evidence chain for one native candidate
+  nativecheck target <pkg>[@version] [--deep] [--json]      diagnose one package (no lockfile / Docker needed)
+  nativecheck --help                                        show this help`
 
 async function runScan(
   dir: string,
-  flags: { deep?: boolean; json?: boolean; ci?: boolean; cache?: boolean; proxy?: string },
+  flags: {
+    deep?: boolean
+    json?: boolean
+    ci?: boolean
+    cache?: boolean
+    proxy?: string
+    ignore?: readonly string[]
+    failOn?: FailOn
+    baselinePath?: string
+  },
 ): Promise<void> {
   const projectRoot = resolve(dir || '.')
   const { scan } = await import('../adapters/node/pipeline')
-  const { report } = await scan(projectRoot, {
+  const { report: scanned } = await scan(projectRoot, {
     mode: flags.deep ? 'deep' : 'fast',
     // --no-cache → cache:false → explicitly disable the disk cache; fast mode never writes anyway.
     cachePath: flags.cache === false ? null : undefined,
     ...(flags.proxy ? { proxy: flags.proxy } : {}),
+  })
+
+  // `--ignore` marks rather than drops: the report stays a full census, the gate
+  // just stops treating those packages as the build's problem.
+  const ignore = flags.ignore ?? []
+  const report: ScanReport = ignore.length
+    ? {
+        ...scanned,
+        findings: scanned.findings.map((f) =>
+          matchesIgnore(f.pkg.name, ignore) ? { ...f, ignored: true } : f,
+        ),
+      }
+    : scanned
+
+  const baseline = readBaseline(flags.baselinePath)
+  const decision = evaluateGate(report.findings, {
+    failOn: flags.failOn ?? 'blocker',
+    ignore,
+    ...(baseline ? { baseline } : {}),
   })
 
   if (flags.json) {
@@ -81,14 +132,36 @@ async function runScan(
     console.log(JSON.stringify(scanReportSchema.parse(report), null, 2))
   } else {
     console.log(renderReport(report))
+    const gate = renderGate(decision)
+    if (gate) console.log(gate)
   }
 
-  // --ci: any blocker or HIGH risk → non-zero exit; unsupported format → 2
-  if (flags.ci) {
-    const hasBlocker = report.findings.some((f) => f.blockers.length > 0)
-    if (hasBlocker || report.summary.byRisk.HIGH > 0) process.exitCode = 1
-  }
+  // --ci: fail when the gate says so; unsupported format → 2
+  if (flags.ci && decision.failed) process.exitCode = 1
   if (report.unsupported) process.exitCode = 2
+}
+
+/** Read a baseline file; a broken/missing baseline is reported and ignored (it must not mask real findings). */
+function readBaseline(path: string | undefined): ReturnType<typeof parseBaseline> {
+  if (!path) return undefined
+  try {
+    const baseline = parseBaseline(readFileSync(resolve(path), 'utf8'))
+    if (!baseline) {
+      console.error(
+        pc.yellow(
+          `nativecheck: cannot parse the baseline (expected previous --json output): ${path}`,
+        ),
+      )
+    }
+    return baseline
+  } catch (error) {
+    console.error(
+      pc.yellow(
+        `nativecheck: failed to read the baseline: ${error instanceof Error ? error.message : String(error)}`,
+      ),
+    )
+    return undefined
+  }
 }
 
 async function runEnv(): Promise<void> {
@@ -149,6 +222,9 @@ const SCAN_FLAGS = new Set([
   '--cache',
   '--no-cache',
   '--proxy',
+  '--ignore',
+  '--fail-on',
+  '--baseline',
   '--help',
   '-h',
 ])
@@ -159,7 +235,8 @@ const TARGET_FLAGS = new Set(['--deep', '--json', '--proxy', '--help', '-h'])
 function unknownFlags(argv: readonly string[], known: ReadonlySet<string>): string[] {
   return argv.filter((arg) => {
     if (!arg.startsWith('-')) return false
-    // `--proxy=https://…` is the same flag as `--proxy https://…`
+    // `--proxy=https://…` and `--fail-on=medium` are the same flags as
+    // `--proxy https://…` and `--fail-on medium`
     return !known.has(arg.split('=')[0] ?? arg)
   })
 }
@@ -216,6 +293,16 @@ async function dispatch(argv: readonly string[]): Promise<boolean> {
     process.exitCode = 1
     return true
   }
+  const failOn = flagValue(argv, '--fail-on')
+  if (failOn !== undefined && !FAIL_ON_LEVELS.includes(failOn as FailOn)) {
+    console.log(
+      `${pc.yellow('invalid --fail-on value:')} ${failOn} (choose from: ${FAIL_ON_LEVELS.join(' | ')})`,
+    )
+    process.exitCode = 1
+    return true
+  }
+  const ignoreList = parseIgnoreList(flagValue(argv, '--ignore'))
+  const baselinePath = flagValue(argv, '--baseline')
   const parsed = parseArgs([...argv], SCAN_ARGS)
   // citty puts positionals into `dir`; fall back to `_`, then to the current directory.
   const positionals = parsed._ ?? []
@@ -226,6 +313,9 @@ async function dispatch(argv: readonly string[]): Promise<boolean> {
     ci: Boolean(parsed.ci),
     cache: parsed.cache !== false, // citty normalizes --no-cache into cache:false
     ...(typeof parsed.proxy === 'string' && parsed.proxy ? { proxy: parsed.proxy } : {}),
+    ...(ignoreList.length > 0 ? { ignore: ignoreList } : {}),
+    ...(failOn ? { failOn: failOn as FailOn } : {}),
+    ...(baselinePath ? { baselinePath } : {}),
   })
   return true
 }

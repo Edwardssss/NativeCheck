@@ -71,8 +71,30 @@ are reported separately and never counted as candidates.
 | `nativecheck target <pkg>[@version]` | Diagnose one package without a lockfile                           |
 | `nativecheck explain <pkg>`          | Evidence chain for one native candidate in this project           |
 
-Exit codes: `0` success · `1` bad arguments, or (with `--ci`) a blocker / HIGH
-risk · `2` unsupported lockfile format, reported on detection regardless of `--ci`.
+Exit codes: `0` success · `1` bad arguments, or (with `--ci`) the gate failed ·
+`2` unsupported lockfile format, reported on detection regardless of `--ci`.
+
+### Using it as a CI gate
+
+No real project has zero warnings, so the gate has two ways to suppress noise,
+and they are meant to be used together:
+
+```bash
+# 1) record a baseline once (the baseline is just --json output)
+nativecheck . --json > nativecheck.baseline.json
+
+# 2) from then on, fail only on new or worse findings, and list the packages the
+#    team has already accepted
+nativecheck . --ci --baseline nativecheck.baseline.json --ignore sharp,@img/*
+```
+
+- `--fail-on`: `blocker` (default: a blocker or a HIGH risk) / `high` / `medium` / `never`.
+- **`UNVERIFIED` / `AMBIGUOUS` never fail a build at any threshold.** "I could not
+  determine this" is not a defect of the project being scanned.
+- `--ignore` only labels a package: it stays in the report and carries
+  `"ignored": true` in JSON. Nothing is hidden.
+- The gate verdict is rendered in its own `Gate:` section: a red light always
+  comes with a reason, and a green light still says what was ignored.
 
 ## Features
 
