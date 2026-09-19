@@ -11,7 +11,7 @@
  * The three implementation deviations from design doc §14.2 (key / TTL /
  * location) are recorded in §28.
  */
-import { mkdir, readFile, writeFile } from 'node:fs/promises'
+import { mkdir, readFile, rename, writeFile } from 'node:fs/promises'
 import { dirname, join } from 'node:path'
 import type { Environment } from '../../core/model'
 import type { DistributionPattern } from '../../core/model'
@@ -44,6 +44,8 @@ export interface VerifyCacheFile {
 export interface VerifyCacheFs {
   readFile(path: string): Promise<string>
   writeFile(path: string, data: string): Promise<void>
+  /** Atomic replace. Required (not optional): the write path's safety depends on it. */
+  rename(from: string, to: string): Promise<void>
   mkdir(path: string, opts: { recursive: boolean }): Promise<unknown>
   now(): number
 }
@@ -53,6 +55,7 @@ export function defaultVerifyCacheFs(): VerifyCacheFs {
   return {
     readFile: (p) => readFile(p, 'utf8'),
     writeFile: (p, d) => writeFile(p, d, 'utf8'),
+    rename: (from, to) => rename(from, to),
     mkdir: (p, o) => mkdir(p, o),
     now: () => Date.now(),
   }
@@ -131,10 +134,18 @@ export function lookupCachedOutcome(
 }
 
 /**
- * Merge a batch of new results back into the cache file. Idempotent and safe
- * for concurrent appends: read existing → merge (newer overwrites older for the
- * same key) → atomic write. Write failures are silently ignored (an
- * optimization, not on the critical path).
+ * Merge a batch of new results back into the cache file.
+ *
+ * The write is **atomic**: the payload goes to `<path>.tmp` and is then renamed
+ * over the target. A plain `writeFile` truncates first, so a crash (or a second
+ * process writing at the same time) left a half-written JSON file — which this
+ * module then treats as a corrupt cache and silently drops, losing every entry
+ * rather than one. `rename` within a directory is atomic on POSIX and on NTFS.
+ *
+ * Expired records are pruned on the way out, so a long-lived cache does not grow
+ * without bound (`pruneVerifyCache` used to be dead code).
+ *
+ * Write failures stay silent: the cache is an optimization, not a failure point.
  */
 export async function saveVerifyCache(
   path: string,
@@ -145,6 +156,10 @@ export async function saveVerifyCache(
   try {
     const existing = await loadVerifyCache(path, fs)
     for (const e of entries) existing.set(e.key, e)
+    // Drop what has expired before persisting, so the file stays proportional to
+    // the live candidate set instead of accumulating one record per package that
+    // was ever scanned.
+    pruneVerifyCache(existing, { ttlMs: DEFAULT_TTL_MS, now: fs.now() })
     const data: VerifyCacheFile = {
       version: 2,
       records: [...existing.values()],
@@ -154,13 +169,19 @@ export async function saveVerifyCache(
     // we only mkdir up to the directory containing the target, guaranteeing the
     // write location matches `path`.
     await fs.mkdir(dirname(path), { recursive: true })
-    await fs.writeFile(path, JSON.stringify(data, null, 2))
+    // Write-then-rename: the target file is only ever observed complete.
+    const tmp = `${path}.tmp`
+    await fs.writeFile(tmp, JSON.stringify(data, null, 2))
+    await fs.rename(tmp, path)
   } catch {
     // A failed cache write does not affect the scan result — we only lose next time's speedup.
   }
 }
 
-/** Drop stale / expired records (optional maintenance, not required by the main scan path). */
+/**
+ * Drop stale / expired records. Called by `saveVerifyCache` on every write, and
+ * exported for callers that want to maintain a cache without scanning.
+ */
 export function pruneVerifyCache(
   cache: Map<string, VerifyCacheRecord>,
   opts: { ttlMs?: number; now?: number } = {},

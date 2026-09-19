@@ -33,13 +33,20 @@ const env: Environment = {
   sdks: [],
 }
 
-/** An in-memory fs with a clock that can be moved forward. */
+/**
+ * An in-memory fs with a clock that can be moved forward.
+ *
+ * `writes` records the target of every writeFile call, which is how the test proves the
+ * cache is written through "temporary file + rename" rather than overwriting the target
+ */
 function memFs(startMs: number): {
   fs: VerifyCacheFs
   clock: { now: number }
   disk: Map<string, string>
+  writes: string[]
 } {
   const disk = new Map<string, string>()
+  const writes: string[] = []
   let now = startMs
   const fs: VerifyCacheFs = {
     readFile: async (p) => {
@@ -47,7 +54,16 @@ function memFs(startMs: number): {
       if (v === undefined) throw new Error('ENOENT')
       return v
     },
-    writeFile: async (p, d) => void disk.set(p, d),
+    writeFile: async (p, d) => {
+      writes.push(p)
+      void disk.set(p, d)
+    },
+    rename: async (from, to) => {
+      const v = disk.get(from)
+      if (v === undefined) throw new Error('ENOENT')
+      disk.set(to, v)
+      disk.delete(from)
+    },
     mkdir: async () => undefined,
     now: () => now,
   }
@@ -62,6 +78,7 @@ function memFs(startMs: number): {
       },
     },
     disk,
+    writes,
   }
 }
 
@@ -122,7 +139,7 @@ describe('loadVerifyCache / saveVerifyCache round trip', () => {
     expect(loaded.get('a')?.fetchedAt).toBe(3_000)
   })
 
-  it('save does not throw when the directory cannot be created (mkdir is idempotent)', async () => {
+  it('save does not throw when it cannot write the directory (mkdir is idempotent)', async () => {
     const { fs } = memFs(1_000)
     const failMkdir: VerifyCacheFs = {
       ...fs,
@@ -139,6 +156,44 @@ describe('loadVerifyCache / saveVerifyCache round trip', () => {
     ).resolves.toBeUndefined() // a failed write stays silent, the main path is unaffected
   })
 
+  it('writes through \"temp file + rename\" so the target never holds half a cache', async () => {
+    const { fs, writes, disk } = memFs(1_000)
+    const path = '/x/verify.json'
+    await saveVerifyCache(path, [{ key: 'a', outcome: outcome(), fetchedAt: 1_000 }], fs)
+    // Overwriting the target directly is the dangerous option: a crash mid-write leaves
+    expect(writes).toEqual([`${path}.tmp`])
+    expect(disk.has(`${path}.tmp`)).toBe(false) // the temp file is gone after the rename
+    expect(JSON.parse(disk.get(path) ?? '{}')).toMatchObject({ version: 2 })
+  })
+
+  it('keeps the old file when the rename fails (better to lose a record than to write a corrupt cache)', async () => {
+    const { fs, disk } = memFs(1_000)
+    const path = '/x/verify.json'
+    await saveVerifyCache(path, [{ key: 'old', outcome: outcome(), fetchedAt: 1_000 }], fs)
+    const before = disk.get(path)
+    const failRename: VerifyCacheFs = {
+      ...fs,
+      rename: async () => {
+        throw new Error('EPERM')
+      },
+    }
+    await expect(
+      saveVerifyCache(path, [{ key: 'new', outcome: outcome(), fetchedAt: 2_000 }], failRename),
+    ).resolves.toBeUndefined()
+    expect(disk.get(path)).toBe(before) // the old contents are intact and still parse
+  })
+
+  it('prunes expired records while writing (the cache cannot grow without bound)', async () => {
+    const { fs } = memFs(1_000)
+    const path = '/x/verify.json'
+    await saveVerifyCache(path, [{ key: 'stale', outcome: outcome(), fetchedAt: 1_000 }], fs)
+    // push the clock past the TTL, then write a new record: stale entries must not come back
+    const { fs: lateFs } = memFs(1_000 + DEFAULT_TTL_MS + 1)
+    await saveVerifyCache(path, [{ key: 'fresh', outcome: outcome(), fetchedAt: 2_000 }], lateFs)
+    const loaded = await loadVerifyCache(path, lateFs)
+    expect([...loaded.keys()]).toEqual(['fresh'])
+  })
+
   it('corrupt JSON → treated as an empty cache, no throw', async () => {
     const { fs, disk } = memFs(1_000)
     disk.set('/x/verify.json', '{ not json !!!')
@@ -152,7 +207,7 @@ describe('loadVerifyCache / saveVerifyCache round trip', () => {
     expect(loaded.size).toBe(0)
   })
 
-  it('an old cache (version=1) → empty cache (semantics changed, so everything is stale)', async () => {
+  it('an old cache (version=1) → empty cache (the semantics changed, so everything is stale)', async () => {
     const { fs, disk } = memFs(1_000)
     disk.set(
       '/x/verify.json',
