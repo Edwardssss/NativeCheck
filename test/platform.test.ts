@@ -18,6 +18,7 @@ import { classifyGraph, matchesPlatform } from '../src/adapters/node/classify'
 import { matchCandidate } from '../src/adapters/node/match'
 import { indexPackages, type LockfilePackage } from '../src/adapters/node/signals'
 import { renderSummary } from '../src/cli/render'
+import { knownPlatformFallbackNames } from '../src/adapters/node/platform-fallback'
 import type { ScanReport } from '../src/core/report'
 import {
   DistributionPattern,
@@ -61,37 +62,37 @@ function clusterParent(
   })
 }
 
-describe('matchesPlatform · replicates the npm os / cpu / libc gate', () => {
-  it('no constraints → always matches', () => {
+describe('matchesPlatform · replays npm\'s own os / cpu / libc gate', () => {
+  it('no constraint → always matches', () => {
     expect(matchesPlatform({}, linuxEnv)).toBe(true)
     expect(matchesPlatform({ os: [], cpu: [] }, winEnv)).toBe(true)
   })
 
-  it('a positive list is a whitelist', () => {
+  it('a positive list is an allowlist', () => {
     expect(matchesPlatform({ os: ['darwin'] }, linuxEnv)).toBe(false)
     expect(matchesPlatform({ os: ['linux', 'darwin'] }, linuxEnv)).toBe(true)
     expect(matchesPlatform({ cpu: ['arm64'] }, linuxEnv)).toBe(false)
     expect(matchesPlatform({ cpu: ['x64', 'arm64'] }, linuxEnv)).toBe(true)
   })
 
-  it('`!` means exclude, and negation wins', () => {
+  it('`!` denies, and denial wins', () => {
     expect(matchesPlatform({ os: ['!win32'] }, linuxEnv)).toBe(true)
     expect(matchesPlatform({ os: ['!win32'] }, winEnv)).toBe(false)
-    // Listed by the whitelist but excluded by a negation → still no match
+    // allowlisted but denied by a `!` entry → still no match
     expect(matchesPlatform({ os: ['!linux', 'darwin'] }, linuxEnv)).toBe(false)
   })
 
-  it('libc is only a decision dimension on linux', () => {
+  it('libc only counts as a dimension on linux', () => {
     expect(matchesPlatform({ libc: ['musl'] }, linuxEnv)).toBe(false)
     expect(matchesPlatform({ libc: ['glibc'] }, linuxEnv)).toBe(true)
     // npm does not check libc on win32
     expect(matchesPlatform({ libc: ['musl'] }, winEnv)).toBe(true)
-    // A failed host libc probe denies nothing (and does not pretend to match)
+    // a failed host libc probe denies nothing (and claims nothing)
     expect(matchesPlatform({ libc: ['musl'] }, { os: 'linux', arch: 'x64', sdks: [] })).toBe(true)
   })
 })
 
-describe('classifyGraph · inapplicable optional packages are dropped, required ones stay', () => {
+describe('classifyGraph · platform-excluded optional packages are dropped, required ones stay', () => {
   const graph = indexPackages([
     pkg({
       name: 'fsevents',
@@ -103,13 +104,13 @@ describe('classifyGraph · inapplicable optional packages are dropped, required 
     pkg({ name: 'darwin-only-addon', version: '1.0.0', os: ['darwin'], hasInstallScript: true }),
   ])
 
-  it('optional-only + platform mismatch → never a candidate (npm would not install it)', () => {
+  it('optional-only + platform mismatch → no candidate (npm would not install it)', () => {
     const result = classifyGraph(graph, { env: winEnv })
     expect(result.platformExcluded).toEqual(['fsevents@2.3.3'])
     expect(result.candidates.map((c) => c.pkg.name)).toEqual(['darwin-only-addon'])
   })
 
-  it('omitting env changes nothing (pure graph logic, backwards compatible)', () => {
+  it('with no env the behaviour is unchanged (pure graph logic, backwards compatible)', () => {
     const result = classifyGraph(graph)
     expect(result.platformExcluded).toEqual([])
     expect(result.candidates.map((c) => c.pkg.name).sort()).toEqual([
@@ -118,7 +119,7 @@ describe('classifyGraph · inapplicable optional packages are dropped, required 
     ])
   })
 
-  it('a match leaves candidates alone (the darwin package is dropped only on win32)', () => {
+  it('a matching platform leaves candidates alone (a darwin package is only dropped on win32)', () => {
     const linuxGraph = indexPackages([
       pkg({
         name: 'linux-only-addon',
@@ -134,8 +135,8 @@ describe('classifyGraph · inapplicable optional packages are dropped, required 
     ])
   })
 
-  it('plain platform sub-packages never count as platformExcluded (they were no candidates)', () => {
-    // A cluster has 26 platform sub-packages, 25 unusable here — counting all 25 is just noise.
+  it('plain platform sub-packages are not counted in platformExcluded (they were never candidates)', () => {
+    // a cluster has 26 platform sub-packages and 25 are unusable here — counting them all would turn the transparency note into noise.
     const clusterGraph = indexPackages([
       pkg({ name: 'plain-sub', version: '1.0.0', optional: true, os: ['darwin'], cpu: ['arm64'] }),
     ])
@@ -143,8 +144,8 @@ describe('classifyGraph · inapplicable optional packages are dropped, required 
   })
 })
 
-describe('matchCandidate · a required dep on a mismatched platform = EBADPLATFORM blocker', () => {
-  it('denies a conclusion instead of saying LOW', () => {
+describe('matchCandidate · a required dependency with a platform mismatch is an EBADPLATFORM blocker', () => {
+  it('a negative verdict rather than LOW', () => {
     const candidate = {
       pkg: pkg({
         name: 'linux-only-addon',
@@ -164,7 +165,7 @@ describe('matchCandidate · a required dep on a mismatched platform = EBADPLATFO
     expect(finding.evidence[0]?.kind).toBe('platform-constraint')
   })
 
-  it('a platform match still follows the normal decision path', () => {
+  it('a matching platform keeps the original verdict', () => {
     const candidate = {
       pkg: pkg({
         name: 'linux-only-addon',
@@ -193,7 +194,7 @@ describe('matchCandidate · pattern A uses sub-package constraints instead of gu
     verdict: NativeVerdict.Yes,
   }
 
-  it('hit on a sub-package for this platform → LOW + Replay + recorded artifact', () => {
+  it('a sub-package matching this platform → LOW + Replay + a recorded artifact', () => {
     const finding = matchCandidate({ candidate, env: linuxEnv })
     expect(finding.risk).toBe(RiskLevel.LOW)
     expect(finding.reliability).toBe(Reliability.Replay)
@@ -203,20 +204,18 @@ describe('matchCandidate · pattern A uses sub-package constraints instead of gu
     )
   })
 
-  it('sub-packages exist but none matches → UNVERIFIED (no guessing LOW or HIGH)', () => {
+  it('sub-packages exist but none matches this platform → UNVERIFIED (neither LOW nor HIGH)', () => {
     const finding = matchCandidate({
       candidate,
       env: { os: 'linux', arch: 's390x', libc: 'glibc', sdks: [] },
     })
     expect(finding.risk).toBe(RiskLevel.UNVERIFIED)
     expect(finding.resolveHint).toContain('package-lock-only')
-    const hint = finding.evidence.find((e) =>
-      e.description.includes('none of the optional sub-packages'),
-    )
+    const hint = finding.evidence.find((e) => e.description.includes('none of the optional sub-packages'))
     expect(hint?.description).toContain('darwin-arm64')
   })
 
-  it('sub-packages carry no platform info → still A, but reliability drops to unverified', () => {
+  it('sub-packages carry no platform information → still pattern A, but reliability drops to unverified', () => {
     const finding = matchCandidate({
       candidate: {
         pkg: clusterParent([{ name: 'sub-a' }, { name: 'sub-b' }]),
@@ -230,7 +229,54 @@ describe('matchCandidate · pattern A uses sub-package constraints instead of gu
   })
 })
 
-describe('renderSummary · skipped packages must stay visible', () => {
+describe('matchCandidate · a missing pattern-A sub-package gets an actionable answer per family', () => {
+  /** A cluster with only darwin sub-packages, evaluated on linux. */
+  function darwinOnlyCluster(name: string) {
+    return {
+      pkg: {
+        ...clusterParent([{ name: `${name}-darwin-arm64`, os: ['darwin'], cpu: ['arm64'] }]),
+        name,
+      },
+      pattern: DistributionPattern.PlatformOptionalDeps,
+      verdict: NativeVerdict.Yes,
+    }
+  }
+
+  it('an install-fails family (esbuild) → HIGH with an install-failure blocker', () => {
+    const finding = matchCandidate({ candidate: darwinOnlyCluster('esbuild'), env: linuxEnv })
+    expect(finding.risk).toBe(RiskLevel.HIGH)
+    expect(finding.blockers[0]?.name).toBe('platform sub-package missing (install fails)')
+    expect(finding.evidence.some((e) => e.source.startsWith('rules:platform-fallback'))).toBe(true)
+    // the family verdict comes from a curated table, so it cannot claim to replay npm
+    expect(finding.reliability).toBe(Reliability.Inferred)
+  })
+
+  it('a runtime-fails family (sharp) → HIGH with a runtime failure (the install looks fine)', () => {
+    const finding = matchCandidate({ candidate: darwinOnlyCluster('sharp'), env: linuxEnv })
+    expect(finding.risk).toBe(RiskLevel.HIGH)
+    expect(finding.blockers[0]?.name).toBe('platform sub-package missing (runtime fails)')
+    expect(finding.blockers[0]?.detail).toContain('no install script')
+  })
+
+  it('an unverified family → stays UNVERIFIED with a resolve hint (no guessing)', () => {
+    const finding = matchCandidate({ candidate: darwinOnlyCluster('mystery-addon'), env: linuxEnv })
+    expect(finding.risk).toBe(RiskLevel.UNVERIFIED)
+    expect(finding.blockers).toEqual([])
+    expect(finding.resolveHint).toContain('package-lock-only')
+  })
+
+  it('the family table is a reviewable list, so changing it must change this test', () => {
+    expect(knownPlatformFallbackNames()).toEqual([
+      'esbuild',
+      'lightningcss',
+      'rolldown',
+      'rollup',
+      'sharp',
+    ])
+  })
+})
+
+describe('renderSummary · skipped packages must be visible', () => {
   const base: ScanReport = {
     target: '/proj',
     generatedAt: '2026-09-19T00:00:00.000Z',
@@ -246,7 +292,7 @@ describe('renderSummary · skipped packages must stay visible', () => {
     },
   }
 
-  it('silently dropping packages looks like a miss, so the summary must state the count', () => {
+  it('silently dropping packages looks like a miss, so the summary has to say how many were skipped', () => {
     expect(renderSummary(base)).not.toContain('platform not applicable')
     const withExcluded: ScanReport = {
       ...base,
