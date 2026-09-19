@@ -35,7 +35,8 @@ jobs:
       - run: npm ci
       - run: npm run lint
       - run: npm run typecheck
-      - run: npm test
+      # Same suite as `npm test`, plus the coverage floors in vitest.config.ts.
+      - run: npm run test:coverage
       - run: npm run rules:coverage:strict
       - run: npm run format:check
       - run: npm run build

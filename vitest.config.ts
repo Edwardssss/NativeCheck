@@ -15,6 +15,17 @@ export default defineConfig({
       include: ['src/**/*.ts'],
       exclude: ['src/cli/**'],
       reporter: ['text', 'html'],
+      // Measured 87.2 / 78.9 / 84.9 / 89.1 (statements / branches / functions /
+      // lines), the same on Windows and on the Linux CI runner. The floors sit
+      // just below that: a real drop fails the build, ordinary fluctuation does
+      // not. Raise them when the measured value rises; never lower one to make a
+      // build pass.
+      thresholds: {
+        statements: 86,
+        branches: 77,
+        functions: 83,
+        lines: 88,
+      },
     },
   },
 })
