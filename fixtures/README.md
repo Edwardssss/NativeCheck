@@ -10,7 +10,7 @@
 覆盖目标： 四种分发模式各 ≥3 个真实样本，lockfile 全格式可读（npm package-lock v2+v3 /
 pnpm-lock.yaml / yarn.lock v1+Berry / 二进制 bun.lockb，均见 `testdata/` 集成样本），
 畸形 lockfile 一律明确退出（Fail Closed）。当前 A=5、B=3、C=5、D=53、
-非 native 对照组 2、格式对照 4（共 73 样本；其中 native 样本 A+B+C+D = 66 ≥ 60，
+非 native 对照组 2、格式对照 4（共 72 样本；其中 native 样本 A+B+C+D = 66 ≥ 60，
 满足 rule-of-three 的 ≤5% FN 置信度门槛）。
 关键：模式 C 覆盖 prebuild-install 与 node-pre-gyp 两类下载器，非 native 覆盖「无 install 脚本」（lodash）与
 「有 install 脚本」（core-js→SUSPICIOUS）两类，防判定过拟合。模式 D 全部经 Docker 编译器 wrapper
