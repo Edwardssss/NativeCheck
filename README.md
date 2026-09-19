@@ -174,7 +174,7 @@ reliable than scraping logs).
 | Platform matrix                                                            | Linux glibc + musl × Node 20 / 22 / 24, six cells, full runs    |
 | Full matrix (68 installable fixtures × 6 environments ≈ 408 real installs) | L2 FN 0.00%, FP 3.08%, deterministic coverage 98.2%             |
 | L1 native detection                                                        | covered by unit tests over fixtures (66 native) + held-out (40) |
-| Automated tests                                                            | 459 cases across 28 files (vitest)                                |
+| Automated tests                                                            | 459 cases across 28 files (vitest)                              |
 | Generalization                                                             | 40 real packages held out from the benchmark set                |
 | Windows                                                                    | six native cells, measured without Docker (see its README)      |
 
