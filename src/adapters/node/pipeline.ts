@@ -91,6 +91,7 @@ export async function scan(projectRoot: string, options: ScanOptions = {}): Prom
       ingestOutcome.graph.totalPackages,
       networkCalls,
       classification.platformExcluded.length,
+      classification.workspaceMembers,
     ),
   }
   return { report }

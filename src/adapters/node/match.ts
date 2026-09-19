@@ -59,6 +59,9 @@ function toPackageRef(pkg: LockfilePackage): PackageRef {
       libc: pkg.libc,
       hasInstallScript: pkg.hasInstallScript,
     },
+    // Derived from the workspace manifests, not from the lockfile, so it stays
+    // out of `raw` — `raw` is the byte-for-byte lockfile view.
+    ...(pkg.workspaces ? { workspaces: pkg.workspaces } : {}),
   }
 }
 

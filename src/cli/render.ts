@@ -27,6 +27,14 @@ export function renderSummary(report: ScanReport): string {
     ...(summary.platformExcluded
       ? [pc.dim(`  ${summary.platformExcluded} optional packages skipped: platform not applicable`)]
       : []),
+    // Same reasoning: a silently skipped package looks like a miss.
+    ...(summary.workspaceMembers?.length
+      ? [
+          pc.dim(
+            `  workspace members (own source, never reported as third-party candidates): ${summary.workspaceMembers.join(', ')}`,
+          ),
+        ]
+      : []),
     '',
     pc.dim('Result'),
     `  ${RISK_META.LOW.badge} ${summary.byRisk.LOW ?? 0} prebuilt-compatible`,
@@ -47,9 +55,14 @@ export function renderSummary(report: ScanReport): string {
 export function renderFinding(finding: PackageFinding): string {
   const meta = RISK_META[finding.risk]
   const name = `${finding.pkg.name}@${finding.pkg.version}`
+  // Monorepo attribution: without it a finding reads "this project depends on
+  // sharp", which in a 40-package workspace is not actionable.
+  const owned = finding.pkg.workspaces?.length
+    ? `  ${pc.dim(`(workspaces: ${finding.pkg.workspaces.join(', ')})`)}`
+    : ''
   const lines: string[] = [
     '',
-    `${meta.badge} ${pc.bold(name)}  ${pc.dim(meta.label.toUpperCase())}`,
+    `${meta.badge} ${pc.bold(name)}  ${pc.dim(meta.label.toUpperCase())}${owned}`,
   ]
 
   if (finding.paths.length > 0) {

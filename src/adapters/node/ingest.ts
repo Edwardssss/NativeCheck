@@ -20,11 +20,120 @@ import { indexPackages } from './signals'
 import { parsePnpmLockfile } from './pnpm'
 import { parseYarnLockfile } from './yarn'
 import { parseBunLockfile } from './bun'
+import { discoverWorkspaces, workspacesDeclaring } from './workspaces'
 
 export interface IngestResult {
   readonly ok: true
   readonly graph: IngestedGraph
   readonly format: string
+}
+
+/**
+ * Recover packages that a workspace member declares but that the
+ * root-reachable tree does not contain.
+ *
+ * In an npm monorepo a member's dependencies hoist to the **root**
+ * `node_modules`, and the lockfile records them there. `loadVirtual` walks
+ * edges starting at the root package, and the root declares none of them, so
+ * they can end up unreachable — a whole monorepo's native dependencies silently
+ * missing from the report. That is a false negative, the one failure mode this
+ * tool must never have.
+ *
+ * The recovery is deliberately narrow, so it cannot turn into "report every
+ * stale lockfile entry":
+ *
+ * - only names a workspace member actually declares (from the manifests), and
+ * - only entries the lockfile itself records, and
+ * - only when that `name@version` is not already in the tree.
+ *
+ * All three conditions have to hold, which is why the orphans npm would prune
+ * on `npm ci` stay out: nobody declares them.
+ */
+function recoverWorkspaceHoistedPackages(
+  projectRoot: string,
+  list: readonly LockfilePackage[],
+  declaredBy: Readonly<Record<string, readonly string[]>>,
+): LockfilePackage[] {
+  if (Object.keys(declaredBy).length === 0) return []
+  const lockfilePath = join(projectRoot, 'package-lock.json')
+  if (!existsSync(lockfilePath)) return []
+  let entries: Record<string, Record<string, unknown>>
+  try {
+    const parsed = JSON.parse(readFileSync(lockfilePath, 'utf8')) as {
+      packages?: Record<string, Record<string, unknown>>
+    }
+    entries = parsed.packages ?? {}
+  } catch {
+    // A lockfile arborist accepted but we cannot re-read means no recovery, not
+    // a failed scan.
+    return []
+  }
+
+  const known = new Set(list.map((pkg) => `${pkg.name}@${pkg.version}`))
+  const recovered: LockfilePackage[] = []
+  for (const [key, entry] of Object.entries(entries)) {
+    const marker = key.lastIndexOf('node_modules/')
+    if (marker === -1) continue
+    const name = key.slice(marker + 'node_modules/'.length)
+    if (!name) continue
+    const members = declaredBy[name]
+    if (!members || members.length === 0) continue
+    const version = typeof entry.version === 'string' ? entry.version : 'unknown'
+    if (known.has(`${name}@${version}`)) continue
+    known.add(`${name}@${version}`)
+    recovered.push({
+      name,
+      version,
+      ...(typeof entry.dev === 'boolean' ? { dev: entry.dev } : {}),
+      optional: typeof entry.optional === 'boolean' ? entry.optional : undefined,
+      ...(Array.isArray(entry.os) ? { os: entry.os as string[] } : {}),
+      ...(Array.isArray(entry.cpu) ? { cpu: entry.cpu as string[] } : {}),
+      ...(Array.isArray(entry.libc) ? { libc: entry.libc as string[] } : {}),
+      ...(entry.hasInstallScript === true ? { hasInstallScript: true } : {}),
+      // The chain records how we know about it: the member asked for it, npm
+      // hoisted it. It is not a guess about a resolved download.
+      pathChains: [[...members, name]],
+      workspaces: members,
+    })
+  }
+  return recovered
+}
+
+/**
+ * Attach workspace ownership to a freshly parsed package list.
+ *
+ * Applied uniformly to every lockfile format, because the ownership table comes
+ * from the *manifests*, not from the lockfile: npm, pnpm, yarn and bun all
+ * normalize into the same shape, so attribution is one pass over the result
+ * rather than four format-specific implementations.
+ *
+ * A single-package project short-circuits (empty map), so nothing changes for
+ * the common case.
+ */
+function attributeWorkspaces(
+  projectRoot: string,
+  list: readonly LockfilePackage[],
+  recoverHoisted = false,
+): LockfilePackage[] {
+  const map = discoverWorkspaces(projectRoot)
+  if (map.members.length === 0) return [...list]
+  const attributed = list.map((pkg) => {
+    const workspaces = workspacesDeclaring(map, pkg.name)
+    const isMember = Object.hasOwn(map.byName, pkg.name)
+    if (!workspaces && !isMember) return pkg
+    return {
+      ...pkg,
+      ...(workspaces ? { workspaces } : {}),
+      ...(isMember ? { isWorkspaceMember: true } : {}),
+    }
+  })
+  // Only npm needs the recovery: the pnpm / yarn / bun parsers read every entry
+  // the lockfile records, reachable from the root or not.
+  if (!recoverHoisted) return attributed
+  return [
+    ...attributed,
+    ...recoverWorkspaceHoistedPackages(projectRoot, attributed, map.declaredBy),
+  ]
 }
 export interface IngestUnsupported {
   readonly ok: false
@@ -233,7 +342,11 @@ export async function ingest(projectRoot: string): Promise<IngestOutcome> {
           reason: 'pnpm-lock.yaml could not be parsed, or is empty',
         }
       }
-      return { ok: true, graph: indexPackages(list), format: 'pnpm (pnpm-lock.yaml)' }
+      return {
+        ok: true,
+        graph: indexPackages(attributeWorkspaces(projectRoot, list)),
+        format: 'pnpm (pnpm-lock.yaml)',
+      }
     } catch (error) {
       return {
         ok: false,
@@ -255,7 +368,11 @@ export async function ingest(projectRoot: string): Promise<IngestOutcome> {
           reason: 'yarn.lock could not be parsed, or is empty',
         }
       }
-      return { ok: true, graph: indexPackages(list), format: 'yarn (yarn.lock)' }
+      return {
+        ok: true,
+        graph: indexPackages(attributeWorkspaces(projectRoot, list)),
+        format: 'yarn (yarn.lock)',
+      }
     } catch (error) {
       return {
         ok: false,
@@ -277,7 +394,11 @@ export async function ingest(projectRoot: string): Promise<IngestOutcome> {
           reason: 'bun.lockb could not be parsed, or is empty',
         }
       }
-      return { ok: true, graph: indexPackages(list), format: 'bun (bun.lockb)' }
+      return {
+        ok: true,
+        graph: indexPackages(attributeWorkspaces(projectRoot, list)),
+        format: 'bun (bun.lockb)',
+      }
     } catch (error) {
       return {
         ok: false,
@@ -351,5 +472,9 @@ export async function ingest(projectRoot: string): Promise<IngestOutcome> {
     ...(entry.isRoot ? { isRoot: true } : {}),
   }))
 
-  return { ok: true, graph: indexPackages(list), format: probe.detected }
+  return {
+    ok: true,
+    graph: indexPackages(attributeWorkspaces(projectRoot, list, true)),
+    format: probe.detected,
+  }
 }

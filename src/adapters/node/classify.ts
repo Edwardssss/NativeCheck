@@ -62,6 +62,15 @@ export interface ClassificationResult {
    * "optional-only" (pnpm / yarn) can never end up in here.
    */
   readonly platformExcluded: readonly string[]
+  /**
+   * Workspace members skipped as candidates (monorepos only), sorted.
+   *
+   * A member is the user's own source, so its `install` script is a build step
+   * they wrote rather than a third-party download. Reported as a transparency
+   * note instead of silently disappearing: "we did not look at these" and "we
+   * looked and found nothing" must not be distinguishable from the outside.
+   */
+  readonly workspaceMembers: readonly string[]
   /** `--fast` must be zero-network; L1 must never touch a remote. */
   readonly networkCalls: 0
 }
@@ -190,8 +199,14 @@ export function classifyGraph(
   const seen = new Set<string>()
   const env = options.env
 
-  for (const pkg of Object.values(graph.packages)) {
-    if (pkg.isRoot) continue
+  const all = Object.values(graph.packages)
+
+  // Workspace members are the user's own packages; see `workspaceMembers`.
+  const members = all.filter((pkg) => pkg.isWorkspaceMember === true)
+  const workspaceMembers = members.map(packageKey).sort()
+
+  for (const pkg of all) {
+    if (pkg.isRoot || pkg.isWorkspaceMember === true) continue
     const pattern = classifyPackage(pkg)
     const verdict = verdictFor(pkg, pattern)
     if (pattern === DistributionPattern.NotNative && verdict === NativeVerdict.No) continue
@@ -208,7 +223,7 @@ export function classifyGraph(
     candidates.push({ pkg, pattern, verdict })
   }
 
-  return { candidates, platformExcluded, networkCalls: 0 }
+  return { candidates, platformExcluded, workspaceMembers, networkCalls: 0 }
 }
 
 /**
