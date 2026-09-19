@@ -10,7 +10,7 @@
  * Hits live registry (registry.npmjs.org); network required.
  * Companion offline tests: the generalization spot-check block in test/install-script.test.ts.
  */
-import { parseInstallScript } from '../../dist/index.js'
+import { parseInstallScript } from '../../dist/experimental.js'
 
 const CASES = [
   // [name, version?, known real behaviour (manually curated ground truth)]
