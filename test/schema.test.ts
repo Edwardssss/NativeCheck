@@ -65,6 +65,14 @@ describe('scanReportSchema', () => {
     expect(parsed.findings[0]?.systemLibs?.libs).toEqual(['libpcap'])
   })
 
+  it('keeps summary.platformExcluded (regression: zod must not strip it)', () => {
+    const report: ScanReport = {
+      ...baseReport,
+      summary: { ...baseReport.summary, platformExcluded: 3 },
+    }
+    expect(scanReportSchema.parse(report).summary.platformExcluded).toBe(3)
+  })
+
   it('rejects a report with a wrong-shaped finding', () => {
     expect(() =>
       scanReportSchema.parse({

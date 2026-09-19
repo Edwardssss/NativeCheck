@@ -28,6 +28,7 @@ import {
 } from '../../core/report'
 import { RiskLevel } from '../../core/risk'
 import type { NativeCandidate } from './classify'
+import { matchesPlatform } from './classify'
 import { allowScriptsPolicy } from './npm-policy'
 import type { LockfilePackage } from './signals'
 import { systemLibHint } from './system-libs'
@@ -253,6 +254,45 @@ export function matchCandidate(input: MatchInput): PackageFinding {
   // forensics" is clearer.
   let risk: RiskLevel = RiskLevel.LOW
   let needsVerify = false
+  // Case-specific remedy that overrides the generic `--deep` hint.
+  let resolveHintOverride: string | undefined
+
+  // Platform applicability, replayed from npm's own os / cpu / libc gate: a
+  // package that excludes this machine is not installed here at all
+  // (`npm install` fails with EBADPLATFORM). Optional-only packages never reach
+  // this point when classify received an env (they are filtered there), so
+  // getting here means a *required* dependency cannot be satisfied.
+  if (!matchesPlatform(pkg, env)) {
+    const declared = describePlatformConstraint(pkg)
+    const host = `${env.os}-${env.arch}${env.libc ? ` (${env.libc})` : ''}`
+    return {
+      pkg: pkgRef,
+      verdict,
+      pattern,
+      strategy: InstallStrategy.Unsupported,
+      risk: RiskLevel.HIGH,
+      reliability: Reliability.Replay,
+      evidence: [
+        evidence(
+          'platform-constraint',
+          `lockfile:${pkg.name}@${pkg.version}#os/cpu/libc`,
+          `本包声明 ${declared}，当前环境为 ${host}：npm 不会安装（EBADPLATFORM）`,
+          Reliability.Replay,
+          { positive: true },
+        ),
+      ],
+      artifacts: [],
+      requirements: [],
+      blockers: [
+        {
+          name: '平台不适用',
+          detail: `包声明 ${declared}，当前环境 ${host}`,
+          remedy: '在受支持的平台上安装，或改用该平台上可用的替代包',
+        },
+      ],
+      paths: pkgRef.paths,
+    }
+  }
 
   switch (pattern) {
     case DistributionPattern.NotNative: {
@@ -262,7 +302,60 @@ export function matchCandidate(input: MatchInput): PackageFinding {
     }
     case DistributionPattern.PlatformOptionalDeps: {
       strategy = InstallStrategy.Prebuilt
-      risk = RiskLevel.LOW
+      // The real risk for Pattern A is not "is there a prebuilt" but "is there
+      // one for *my* platform" (see the module header). The lockfile records the
+      // sub-packages' own os / cpu / libc, so this is answerable offline — and
+      // answering it is the difference between a verified LOW and a guess.
+      const sub = platformSubpackageMatch(pkg, env)
+      if (sub.state === 'matched') {
+        risk = RiskLevel.LOW
+        artifacts.push({
+          source: 'optional-dependency',
+          platform: env.os,
+          arch: env.arch,
+          ...(env.libc ? { libc: env.libc } : {}),
+        })
+        chain.push(
+          evidence(
+            'platform-constraint',
+            `lockfile:${pkg.name}@${pkg.version}#optionalDependencies`,
+            `平台子包 ${sub.name} 满足当前平台（${env.os}-${env.arch}），无需本地编译`,
+            Reliability.Replay,
+            { positive: false },
+          ),
+        )
+      } else if (sub.state === 'absent') {
+        // The sub-packages carry platform constraints and none matches → this
+        // lockfile cannot supply a binary here. That much is certain; whether the
+        // install script then fails hard or fetches something is not, so this
+        // stays UNVERIFIED rather than being inflated into HIGH.
+        risk = RiskLevel.UNVERIFIED
+        resolveHintOverride =
+          '确认 lockfile 与当前平台一致（重新生成：npm install --package-lock-only）'
+        chain.push(
+          evidence(
+            'platform-constraint',
+            `lockfile:${pkg.name}@${pkg.version}#optionalDependencies`,
+            `可选子包没有任何一个匹配当前平台（${env.os}-${env.arch}）；锁文件中的平台：${sub.available}`,
+            Reliability.Inferred,
+            { positive: true },
+          ),
+        )
+      } else {
+        // No platform information on the sub-packages (pnpm / yarn adapters, or a
+        // lockfile that never recorded os/cpu): mode A is confirmed, the platform
+        // match is not — Fail Closed and say so instead of claiming a match.
+        risk = RiskLevel.LOW
+        chain.push(
+          evidence(
+            'platform-constraint',
+            `lockfile:${pkg.name}@${pkg.version}#optionalDependencies`,
+            '子包未记录 os/cpu/libc，无法离线确认本平台是否有对应产物',
+            Reliability.Unverified,
+            { positive: true },
+          ),
+        )
+      }
       break
     }
     case DistributionPattern.Prebuildify: {
@@ -437,7 +530,11 @@ export function matchCandidate(input: MatchInput): PackageFinding {
     requirements: requirements.map((r) => `${r.name} ${r.versionRequirement ?? ''}`.trim()),
     blockers,
     // When unverified / statically indeterminable, always carry the "how to make it conclusive" hint
-    ...(needsVerify ? { resolveHint: 'nativecheck . --deep' } : {}),
+    ...(resolveHintOverride
+      ? { resolveHint: resolveHintOverride }
+      : needsVerify
+        ? { resolveHint: 'nativecheck . --deep' }
+        : {}),
     ...(allowScripts ? { allowScripts } : {}),
     ...(systemLibs ? { systemLibs } : {}),
     paths: pkgRef.paths,
@@ -465,6 +562,46 @@ function buildSystemLibNote(name: string, env: Environment): SystemLibNote | und
     detail: `本包可能链接系统库 ${hint.display}，当前未通过 pkg-config 检测到（可能未安装、或未安装开发头文件）`,
     remedy: `Debian/Ubuntu: apt install ${hint.devPkg}；Alpine 请查对应包名。若该包内置/自带此库可忽略本提示`,
   }
+}
+
+/**
+ * Which optional sub-package of a Pattern-A cluster is usable on this machine.
+ *
+ * Tri-state on purpose: "the sub-packages carry no platform information" (yarn,
+ * or a lockfile that never recorded os/cpu) must never be read as "no sub-package
+ * for this platform". The former is unverified, the latter is evidence.
+ */
+function platformSubpackageMatch(
+  pkg: LockfilePackage,
+  env: Environment,
+):
+  | { state: 'matched'; name: string }
+  | { state: 'absent'; available: string }
+  | { state: 'unknown' } {
+  const optionalSubs = Object.values(pkg.dependencies ?? {}).filter((dep) => dep.optional)
+  const constrained = optionalSubs.filter((dep) => dep.os || dep.cpu || dep.libc)
+  if (constrained.length === 0) return { state: 'unknown' }
+
+  const hit = constrained.find((dep) => matchesPlatform(dep, env))
+  if (hit) return { state: 'matched', name: hit.name }
+
+  const label = (dep: (typeof constrained)[number]): string =>
+    `${dep.os?.join('|') ?? '?'}-${dep.cpu?.join('|') ?? '?'}`
+  const platforms = [...new Set(constrained.map(label))].sort()
+  const shown = platforms.slice(0, 6).join(' / ')
+  return {
+    state: 'absent',
+    available: platforms.length > 6 ? `${shown} …（共 ${platforms.length} 种）` : shown,
+  }
+}
+
+/** Human-readable os / cpu / libc triple, for evidence text and remedies. */
+function describePlatformConstraint(pkg: Pick<LockfilePackage, 'os' | 'cpu' | 'libc'>): string {
+  const parts: string[] = []
+  if (pkg.os?.length) parts.push(`os=${pkg.os.join('|')}`)
+  if (pkg.cpu?.length) parts.push(`cpu=${pkg.cpu.join('|')}`)
+  if (pkg.libc?.length) parts.push(`libc=${pkg.libc.join('|')}`)
+  return parts.length > 0 ? parts.join(' ') : '无平台约束'
 }
 
 /** The fallback path is an annotation, not the main verdict. */

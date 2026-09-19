@@ -40,10 +40,22 @@ export interface LockfilePackage {
   readonly isRoot?: boolean
 }
 
-/** A dependency edge. `optional` identifies platform sub-package clusters (Pattern A). */
+/**
+ * A dependency edge. `optional` identifies platform sub-package clusters (Pattern A).
+ *
+ * The platform fields describe the **target** package's own constraints, not the
+ * parent's. They are what makes Pattern A answerable offline: a cluster is only
+ * ``prebuilt-compatible` if one of its optional sub-packages is usable on the
+ * current platform. Adapters that cannot see the target's constraints (yarn)
+ * leave them undefined, which callers must treat as "unknown", never "absent".
+ */
 export interface LockfileDependency {
   readonly name: string
+  /** The parent's `optionalDependencies` — NOT `edge.optional` in arborist terms; see ingest.ts. */
   readonly optional?: boolean
+  readonly os?: readonly string[]
+  readonly cpu?: readonly string[]
+  readonly libc?: readonly string[]
 }
 
 /** The result of normalizing a dependency tree at Layer 0. */

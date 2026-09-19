@@ -19,7 +19,7 @@
  *    binary. When unsure, drop into SUSPICIOUS, rendered in neutral gray and
  *    excluded from risk statistics.
  */
-import { DistributionPattern, NativeVerdict } from '../../core/model'
+import { DistributionPattern, NativeVerdict, type Environment } from '../../core/model'
 import {
   AUXILIARY_NATIVE_DEPS_SET,
   LEGACY_NATIVE_DEPS_SET,
@@ -39,11 +39,61 @@ export interface NativeCandidate {
   readonly verdict: NativeVerdict
 }
 
+/** Options for `classifyGraph`. */
+export interface ClassifyOptions {
+  /**
+   * Environment snapshot. When given, packages the current platform excludes are
+   * filtered (see `platformExcluded`); omit it to stay purely graph-driven.
+   */
+  readonly env?: Environment
+}
+
 /** Every candidate in the tree judged native (or suspicious). */
 export interface ClassificationResult {
   readonly candidates: readonly NativeCandidate[]
+  /**
+   * Optional-only packages the current platform excludes (`os` / `cpu` / `libc`
+   * mismatch) **that would otherwise have been reported** — npm simply does not
+   * install them, so they are not native-build risks here; fsevents on Windows
+   * is the canonical case. Plain platform sub-packages (esbuild's 26 variants)
+   * are not counted: they are never candidates to begin with. Only populated
+   * when an `env` was passed, and adapter formats that do not record
+   * "optional-only" (pnpm / yarn) can never end up in here.
+   */
+  readonly platformExcluded: readonly string[]
   /** `--fast` must be zero-network; L1 must never touch a remote. */
   readonly networkCalls: 0
+}
+
+/**
+ * Replay npm's own os / cpu / libc gate (`npm-install-checks` → `checkPlatform`).
+ *
+ * Positive entries are an allowlist and `!x` entries deny, so `os: ['darwin']`
+ * on linux means "not installed here" — a fact taken from npm's decision logic,
+ * not a heuristic. An absent constraint matches everything.
+ */
+export function matchesPlatform(
+  pkg: Pick<LockfilePackage, 'os' | 'cpu' | 'libc'>,
+  env: Environment,
+): boolean {
+  if (!matchesConstraint(pkg.os, env.os)) return false
+  if (!matchesConstraint(pkg.cpu, env.arch)) return false
+  // libc is only a dimension on Linux (npm skips the check on darwin / win32).
+  if (env.os === 'linux' && pkg.libc && pkg.libc.length > 0) {
+    // Host libc undetectable (e.g. `detect-libc` failed) → cannot deny, and we
+    // deliberately do not claim a match either; treat it as "no constraint seen".
+    if (env.libc && !matchesConstraint(pkg.libc, env.libc)) return false
+  }
+  return true
+}
+
+/** Allowlist + `!` denial semantics, shared by the os / cpu / libc dimensions. */
+function matchesConstraint(list: readonly string[] | undefined, value: string): boolean {
+  if (!list || list.length === 0) return true
+  if (list.includes(`!${value}`)) return false
+  const positives = list.filter((entry) => !entry.startsWith('!'))
+  if (positives.length === 0) return true
+  return positives.includes(value)
 }
 
 /** Classify a single package by priority. Stops at the first hit; falls through to NotNative. */
@@ -130,10 +180,21 @@ export function verdictFor(pkg: LockfilePackage, pattern: DistributionPattern): 
  * 2. then run the transitive closure reverse lookup: walk dependency edges, find
  *    packages that depend on a build tool, and record the consumer closest to
  *    the project root on its **ancestor chain** as the native entry point.
+ *
+ * When `options.env` is given, packages the current platform cannot install and
+ * that are *only* reachable through optional dependencies are left out entirely
+ * (npm skips them silently — reporting fsevents as an ambiguous native package
+ * on Windows is noise, not a finding). Packages that are required stay in: those
+ * are genuine `EBADPLATFORM` blockers, so they go to Layer 3 which can say so.
  */
-export function classifyGraph(graph: IngestedGraph): ClassificationResult {
+export function classifyGraph(
+  graph: IngestedGraph,
+  options: ClassifyOptions = {},
+): ClassificationResult {
   const candidates: NativeCandidate[] = []
+  const platformExcluded: string[] = []
   const seen = new Set<string>()
+  const env = options.env
 
   const all = Object.values(graph.packages)
 
@@ -145,6 +206,13 @@ export function classifyGraph(graph: IngestedGraph): ClassificationResult {
     const pattern = classifyPackage(pkg)
     const verdict = verdictFor(pkg, pattern)
     if (pattern === DistributionPattern.NotNative && verdict === NativeVerdict.No) continue
+    // Platform gate, applied only to packages that would otherwise be reported:
+    // counting every platform sub-package (esbuild ships 26, 25 of them useless
+    // here) would turn the transparency note into noise.
+    if (env && pkg.optional === true && !matchesPlatform(pkg, env)) {
+      platformExcluded.push(packageKey(pkg))
+      continue
+    }
     const key = packageKey(pkg)
     if (seen.has(key)) continue
     seen.add(key)
@@ -163,7 +231,7 @@ export function classifyGraph(graph: IngestedGraph): ClassificationResult {
     candidates.push({ pkg: root.pkg, pattern: root.pattern, verdict: NativeVerdict.Yes })
   }
 
-  return { candidates, networkCalls: 0 }
+  return { candidates, platformExcluded, networkCalls: 0 }
 }
 
 /** Locate native entry points backwards from build tools and infer their distribution pattern. */

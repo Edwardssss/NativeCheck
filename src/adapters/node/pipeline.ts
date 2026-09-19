@@ -71,7 +71,7 @@ export async function scan(projectRoot: string, options: ScanOptions = {}): Prom
     return { report, unsupported: ingestOutcome }
   }
 
-  const classification = classifyGraph(ingestOutcome.graph)
+  const classification = classifyGraph(ingestOutcome.graph, { env })
   const cache: FindingCache = buildFindingCache(projectRoot, options, mode)
   const { findings, networkCalls } = await buildFindings(classification.candidates, env, {
     deep: mode === 'deep',
@@ -86,7 +86,12 @@ export async function scan(projectRoot: string, options: ScanOptions = {}): Prom
     mode,
     durationMs: Date.now() - started,
     findings,
-    summary: summarize(findings, ingestOutcome.graph.totalPackages, networkCalls),
+    summary: summarize(
+      findings,
+      ingestOutcome.graph.totalPackages,
+      networkCalls,
+      classification.platformExcluded.length,
+    ),
   }
   return { report }
 }

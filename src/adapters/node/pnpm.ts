@@ -46,6 +46,41 @@ function parseNameVersion(key: string): { name: string; version: string } {
 }
 
 /**
+ * Platform constraints of the edge's **target**, resolved through the `packages`
+ * map (Pattern A's platform matching needs them, and a dependency's own entry is
+ * where pnpm keeps `os` / `cpu` / `libc`).
+ *
+ * Specs are exact versions, optionally peer-suffixed (`1.2.3(react@18.2.0)`) or
+ * protocol-qualified (`npm:other@1.2.3`). `link:` / `workspace:` / `file:` refs
+ * have no package entry, so they simply contribute nothing.
+ */
+function edgePlatform(
+  packages: Record<string, PnpmPackageMeta>,
+  name: string,
+  spec: string | undefined,
+): Pick<LockfileDependency, 'os' | 'cpu' | 'libc'> {
+  if (!spec) return {}
+  let lookupName = name
+  let version = spec
+  if (spec.startsWith('npm:')) {
+    const rest = spec.slice('npm:'.length)
+    const at = rest.lastIndexOf('@')
+    if (at <= 0) return {}
+    lookupName = rest.slice(0, at)
+    version = rest.slice(at + 1)
+  } else if (!/^\d/.test(spec)) {
+    return {} // link: / workspace: / file: / portal: — not a registry package
+  }
+  const meta = packages[`${lookupName}@${version.replace(/\(.*\)$/, '')}`]
+  if (!meta) return {}
+  return {
+    ...(meta.os ? { os: meta.os } : {}),
+    ...(meta.cpu ? { cpu: meta.cpu } : {}),
+    ...(meta.libc ? { libc: meta.libc } : {}),
+  }
+}
+
+/**
  * Parse a pnpm-lock.yaml into normalized `LockfilePackage[]`.
  * Returns an empty list on malformed YAML (caller falls through to Fail Closed).
  */
@@ -64,11 +99,15 @@ export function parsePnpmLockfile(content: string): LockfilePackage[] {
     const { name, version } = parseNameVersion(key)
     const meta = packages[key] ?? {}
     const dependencies: Record<string, LockfileDependency> = {}
-    for (const depName of Object.keys(snapshot.dependencies ?? {})) {
-      dependencies[depName] = { name: depName }
+    for (const [depName, spec] of Object.entries(snapshot.dependencies ?? {})) {
+      dependencies[depName] = { name: depName, ...edgePlatform(packages, depName, spec) }
     }
-    for (const depName of Object.keys(snapshot.optionalDependencies ?? {})) {
-      dependencies[depName] = { name: depName, optional: true }
+    for (const [depName, spec] of Object.entries(snapshot.optionalDependencies ?? {})) {
+      dependencies[depName] = {
+        name: depName,
+        optional: true,
+        ...edgePlatform(packages, depName, spec),
+      }
     }
     list.push({
       name,

@@ -23,6 +23,10 @@ export function renderSummary(report: ScanReport): string {
     '',
     pc.dim('Dependency scan'),
     `  ${summary.totalPackages} packages · ${summary.nativeCandidates} native candidates`,
+    // Transparency: silently dropping packages would look like a miss.
+    ...(summary.platformExcluded
+      ? [pc.dim(`  另有 ${summary.platformExcluded} 个可选包因平台不适用被跳过`)]
+      : []),
     '',
     pc.dim('Result'),
     `  ${RISK_META.LOW.badge} ${summary.byRisk.LOW ?? 0} prebuilt-compatible`,

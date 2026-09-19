@@ -16,9 +16,18 @@
 #
 # Risk is UNVERIFIED in fast path (no tarball probe). On Darwin with a
 # matching prebuild, --deep would resolve to LOW.
+#
+# Platform gate (added with the S1 fix, 2026-09 review): fsevents declares
+# `os: ["darwin"]`, this suite pins env = linux-x64, and here it is a
+# *required* root dependency — so npm refuses to install it at all
+# (EBADPLATFORM). The pattern stays B (that is what fsevents distributes), but
+# installability is answered first: strategy UNSUPPORTED / risk HIGH, drawn
+# from npm's own gate (Replay), not from a heuristic. In a real tree fsevents
+# arrives as an *optional* dep, in which case the same gate drops it from the
+# candidate list entirely (see summary.platformExcluded).
 pattern: Prebuildify
-strategy: PREBUILT
-risk: UNVERIFIED
+strategy: UNSUPPORTED
+risk: HIGH
 native: true
 network_calls: 0
 subject: fsevents
@@ -27,4 +36,5 @@ notes: >
   is the prebuilt binary. The D label in the previous expected file was an
   assertion mistake carried over from the spec draft; this fixture
   documents the real behavior. The "fallback compile" exists but is
-  second-order and not the primary distribution.
+  second-order and not the primary distribution. On linux the platform gate
+  precedes the pattern verdict, hence UNSUPPORTED / HIGH here.

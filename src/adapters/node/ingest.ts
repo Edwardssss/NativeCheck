@@ -85,31 +85,79 @@ export function probeLockfile(projectRoot: string): {
   return { supported: true, detected: 'npm (package-lock.json)', version }
 }
 
-/** Extract one lockfile package record from an arborist node. */
+/**
+ * Whether npm would treat this node as an *optional* dependency: every incoming
+ * edge is declared in the parent's `optionalDependencies`.
+ *
+ * Deliberately NOT `node.optional`: arborist also sets that flag for
+ * platform-mismatched nodes (a required `fsevents` on linux turns "optional" in
+ * the virtual tree), which conflates "the author declared it optional" with
+ * "npm will skip it on this machine". The two produce opposite verdicts — skip
+ * vs `EBADPLATFORM` — so the declaration is the field to read.
+ *
+ * `undefined` when the node has no incoming edge (the root): "unknown", not
+ * "optional".
+ */
+function declaredOptionalOnly(node: Node): boolean | undefined {
+  const edgesIn = node.edgesIn
+  if (!edgesIn || edgesIn.size === 0) return undefined
+  let every = true
+  for (const edge of edgesIn) {
+    const declared = edge.from?.package?.optionalDependencies
+    if (!declared || !Object.hasOwn(declared, edge.name ?? '')) every = false
+  }
+  return every
+}
+
+/**
+ * Extract one lockfile package record from an arborist node.
+ *
+ * Two fields must be read off `node.package` rather than off the node itself:
+ *
+ * 1. **Platform constraints (S1).** arborist's `Node` has no `os` / `cpu` /
+ *    `libc` getters — only `package` — so `node.os` was always `undefined` and
+ *    the whole S1 signal (plus the `raw` fields in `--json`) was silently empty.
+ * 2. **Genuinely optional dependencies (S5).** `edge.optional` is arborist's
+ *    `type === 'optional' || type === 'peerOptional'`, i.e. an *optional peer*
+ *    (`peerDependenciesMeta[x].optional`) counts too. That made ordinary
+ *    tooling packages look like a platform-sub-package cluster: vite@8
+ *    declares one optionalDependency (fsevents) but 13 optional edges
+ *    (less / sass / terser / tsx / …), so it was classified as Pattern A and
+ *    reported as `PREBUILT` / `LOW`. Membership in the package's own
+ *    `optionalDependencies` is the signal S5 actually wants.
+ */
 function fromArboristNode(node: Node): LockfilePackage | null {
   if (!node.name) return null
+  const pkg = node.package ?? {}
+  const optionalNames = new Set(Object.keys(pkg.optionalDependencies ?? {}))
   const edges = node.edgesOut ?? new Map()
   const dependencies: Record<string, { name: string; optional?: boolean }> = {}
   for (const [, edge] of edges) {
     const name = edge.name || edge.to?.name
     if (!name) continue
-    // `optional` comes only from edge.optional: dev/peer edges do not count,
-    // otherwise the project root's ordinary devDeps look like a platform
-    // sub-package cluster (see the cluster criterion in classify).
+    // Dev/peer edges are kept as edges (build-tool detection wants them) but
+    // they are NOT optional: the cluster criterion must only count the
+    // package's own optionalDependencies (see the node doc above).
+    // The target's platform constraints ride along so Layer 3 can answer
+    // "is there a sub-package for *my* platform" without a second graph walk.
+    const target = edge.to?.package
     dependencies[name] = {
       name,
-      optional: Boolean(edge.optional),
+      optional: optionalNames.has(name),
+      ...(target?.os ? { os: target.os } : {}),
+      ...(target?.cpu ? { cpu: target.cpu } : {}),
+      ...(target?.libc ? { libc: target.libc } : {}),
     }
   }
   return {
     name: node.name,
     version: node.version ?? 'unknown',
     dev: node.dev || node.devOptional,
-    optional: node.optional || node.peer,
-    os: (node as unknown as { os?: string[] }).os,
-    cpu: (node as unknown as { cpu?: string[] }).cpu,
-    libc: (node as unknown as { libc?: string[] }).libc,
-    hasInstallScript: (node as unknown as { hasInstallScript?: boolean }).hasInstallScript,
+    optional: declaredOptionalOnly(node),
+    os: pkg.os,
+    cpu: pkg.cpu,
+    libc: pkg.libc,
+    hasInstallScript: node.hasInstallScript,
     dependencies: Object.keys(dependencies).length > 0 ? dependencies : undefined,
     pathChains: [[node.name]],
   }

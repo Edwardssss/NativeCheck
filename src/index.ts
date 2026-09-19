@@ -20,6 +20,7 @@ export {
   classifyGraph,
   classifyPackage,
   dependsOnBuildTool,
+  matchesPlatform,
   verdictFor,
 } from './adapters/node/classify'
 export { matchCandidate, isNativeVerdict } from './adapters/node/match'
@@ -62,7 +63,11 @@ export { parseYarnLockfile } from './adapters/node/yarn'
 export { parseBunLockfile } from './adapters/node/bun'
 export { allowScriptsPolicy } from './adapters/node/npm-policy'
 export { systemLibHint } from './adapters/node/system-libs'
-export type { NativeCandidate, ClassificationResult } from './adapters/node/classify'
+export type {
+  NativeCandidate,
+  ClassificationResult,
+  ClassifyOptions,
+} from './adapters/node/classify'
 export type { MatchInput } from './adapters/node/match'
 export type { TargetOptions, ParsedSpec } from './adapters/node/target'
 export type { LockfilePackage, IngestedGraph, LockfileDependency } from './adapters/node/signals'

@@ -95,6 +95,12 @@ export interface ScanSummary {
   readonly totalPackages: number
   readonly nativeCandidates: number
   readonly byRisk: Readonly<Record<RiskLevel, number>>
+  /**
+   * Packages left out because the current platform cannot install them
+   * (`os` / `cpu` / `libc` mismatch on an optional-only dependency — npm skips
+   * exactly those). Present only when non-zero, so old reports stay valid.
+   */
+  readonly platformExcluded?: number
   /** Must always be 0 under `--fast`. This assertion is the only reliable way to keep the default path fully offline. */
   readonly networkCalls: number
 }
@@ -115,6 +121,7 @@ export function summarize(
   findings: readonly PackageFinding[],
   totalPackages: number,
   networkCalls: number,
+  platformExcluded = 0,
 ): ScanSummary {
   const byRisk: Record<RiskLevel, number> = {
     [RiskLevel.LOW]: 0,
@@ -131,5 +138,6 @@ export function summarize(
     nativeCandidates: findings.length,
     byRisk,
     networkCalls,
+    ...(platformExcluded > 0 ? { platformExcluded } : {}),
   }
 }
