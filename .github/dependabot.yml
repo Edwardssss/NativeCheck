@@ -24,6 +24,28 @@ updates:
       majors:
         patterns: ['*']
         update-types: ['major']
+    # The floor in package.json#engines is a promise (Node >= 20.19), and
+    # engine-strict makes npm refuse to install anything that contradicts it — so
+    # these majors cannot be adopted by accepting a dependency PR. They need a
+    # deliberate decision to drop older Node, which is a product call, not an
+    # update: ignoring them keeps the weekly noise away until then.
+    ignore:
+      # Require Node ^22.22.2 || ^24.15 || >=26: all three exclude Node 20.
+      - dependency-name: '@npmcli/arborist'
+        update-types: ['version-update:semver-major']
+      - dependency-name: 'undici'
+        update-types: ['version-update:semver-major']
+      - dependency-name: 'node-abi'
+        update-types: ['version-update:semver-major']
+      # vitest 5 requires Node ^22.12 || ^24 || >=26, so it is the same decision.
+      - dependency-name: 'vitest'
+        update-types: ['version-update:semver-major']
+      - dependency-name: '@vitest/*'
+        update-types: ['version-update:semver-major']
+      # typescript-eslint's peer is currently >=4.8.4 <6.1.0, so TS 7 cannot be
+      # installed at all. Only the 7.x band is ignored: TS 8 should come back.
+      - dependency-name: 'typescript'
+        versions: ['>=7 <8']
 
   # The workflows pin actions by major tag; this keeps those tags moving. All of
   # them land in one PR: an action bump is not a behaviour change to review one by
