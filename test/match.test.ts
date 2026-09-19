@@ -182,6 +182,28 @@ describe('matchCandidate', () => {
     })
     expect(finding.risk).toBe(RiskLevel.AMBIGUOUS)
   })
+
+  it('deep 取不到脚本内容时，证据文案不留空括号、不带未验证标记', () => {
+    // 触发条件：lockfile 说 hasInstallScript，registry manifest 却没有任何 hook 内容。
+    const ghost = pkg({ name: 'ghost-script', version: '1.0.0', hasInstallScript: true })
+    const finding = matchCandidate({
+      candidate: {
+        pkg: ghost,
+        pattern: DistributionPattern.NotNative,
+        verdict: NativeVerdict.Suspicious,
+      },
+      env,
+      // 已取证（layer 2），但没有任何 hook 文本可读
+      verify: { installScript: { script: '', intent: 'unknown' }, networkCalls: 1 },
+    })
+    expect(finding.risk).toBe(RiskLevel.AMBIGUOUS)
+    const hint = finding.evidence.find((e) => e.kind === 'install-script-intent')
+    expect(hint?.description).not.toContain('（）')
+    expect(hint?.description).toContain('registry manifest')
+    expect(hint?.layer).toBe(1)
+    // 结论的可靠性不能弱于自己的证据链
+    expect(finding.reliability).toBe(Reliability.Inferred)
+  })
 })
 
 describe('matchCandidate · npm allowScripts 提示', () => {

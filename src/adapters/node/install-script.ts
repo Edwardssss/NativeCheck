@@ -84,13 +84,13 @@ function isCustomDownloader(segment: string): boolean {
 }
 
 /**
- * Merge the intents of two independent lifecycle hooks (install + postinstall).
- * npm runs install then postinstall unconditionally, so the combined semantics
- * is "the most severe action that definitely happens":
+ * Merge the intents of two independent lifecycle hooks (preinstall / install /
+ * postinstall). npm runs them all, in that order, so the combined semantics is
+ * "the most severe action that definitely happens":
  *
  *   compile > download_then_compile > download > select > unknown
  *
- * This fixes blind spot §1.4: joining the two hooks with `||` made
+ * This fixes blind spot §1.4: joining the hooks with `||` made
  * "install downloads + postinstall compiles" look like a download-then-compile
  * *fallback*, when in fact the compile is unconditional — the package will
  * compile no matter what the download hook does.

@@ -174,23 +174,22 @@ export async function verifyCandidate(
         } catch {
           return { networkCalls: 1 }
         }
-        const scripts = [manifest.meta.install, manifest.meta.postinstall].filter(
-          (s): s is string => typeof s === 'string' && s.trim().length > 0,
-        )
-        // Blind spot §1.4: install and postinstall are two independent hooks that
-        // BOTH run (install then postinstall). Joining them with `||` would make
-        // "install downloads + postinstall compiles" read as a download-then-compile
-        // *fallback* (understating the compile). Parse each hook separately and
-        // merge by severity (compile wins) instead.
-        const installScript = typeof manifest.meta.install === 'string' ? manifest.meta.install : ''
-        const postinstallScript =
-          typeof manifest.meta.postinstall === 'string' ? manifest.meta.postinstall : ''
-        const script = scripts.join(' ; ')
-        const intent = mergeHookIntents(
-          parseInstallScript(installScript),
-          parseInstallScript(postinstallScript),
-        )
-        const base = { installScript: { script, intent } }
+        // npm runs preinstall → install → postinstall, and all three run
+        // unconditionally, so the combined semantics is "the most severe action
+        // that definitely happens". Dropping preinstall (where a plain
+        // `node-gyp rebuild` often sits) left such packages at AMBIGUOUS forever.
+        const hooks = [
+          manifest.meta.preinstall,
+          manifest.meta.install,
+          manifest.meta.postinstall,
+        ].filter((s): s is string => typeof s === 'string' && s.trim().length > 0)
+        // Joining the hooks with `||` would make "install downloads + postinstall
+        // compiles" read as a download-then-compile *fallback*; parse each hook
+        // separately and merge by severity (compile wins). Blind spot §1.4.
+        const intent = hooks
+          .map((hook) => parseInstallScript(hook))
+          .reduce<ScriptIntent>((merged, next) => mergeHookIntents(merged, next), 'unknown')
+        const base = { installScript: { script: hooks.join(' ; '), intent } }
         // Download-ish intents: reuse pattern C and issue one more HEAD to confirm the remote artifact exists.
         if (intent === 'download' || intent === 'download_then_compile') {
           const url = deriveRemoteUrlFromMeta(pkg.name, pkg.version, env, manifest.meta)
