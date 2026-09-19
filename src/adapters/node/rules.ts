@@ -17,7 +17,12 @@
 import rules from './rules.json'
 
 /**
- * Native build-tool allowlist.
+ * Native build-tool allowlist — the **union view** of every build tool.
+ *
+ * Nothing imports it: the classifier reads the per-pattern sets below, and a
+ * dependency edge on any of these names already lands in one of them. It is kept
+ * as the single reviewable place listing the allowlist (and it is what the rule-
+ * coverage gate walks).
  *
  * Key insight: **a native package may declare no native trait at all, but it
  * must depend on a build tool.** So "dependency edge hits the allowlist" is far
@@ -48,6 +53,9 @@ export const NAPI_HEADERS: readonly string[] = rules.NAPI_HEADERS
  * (sharp, lightningcss, @parcel/watcher, …) — so treating it as a native signal
  * would flood the report with gray noise. `detect-libc` is therefore ignored by
  * the classifier entirely; SUSPICIOUS is produced only by `hasInstallScript`.
+ *
+ * Like `NATIVE_BUILD_TOOLS` this table has no code consumer: it documents *why*
+ * those names are absent from every per-pattern set.
  */
 export const AUXILIARY_NATIVE_DEPS: readonly string[] = rules.AUXILIARY_NATIVE_DEPS
 
@@ -66,9 +74,8 @@ export const FALLBACK_ABI: Readonly<Record<string, string>> = {
 
 const SET = (list: readonly string[]): ReadonlySet<string> => new Set(list)
 
-export const NATIVE_BUILD_TOOLS_SET = SET(NATIVE_BUILD_TOOLS)
+// Per-pattern lookup sets — the tables the classifier actually reads.
 export const PREBUILDIFY_LOADERS_SET = SET(PREBUILDIFY_LOADERS)
 export const REMOTE_DOWNLOADERS_SET = SET(REMOTE_DOWNLOADERS)
 export const LEGACY_NATIVE_DEPS_SET = SET(LEGACY_NATIVE_DEPS)
 export const NAPI_HEADERS_SET = SET(NAPI_HEADERS)
-export const AUXILIARY_NATIVE_DEPS_SET = SET(AUXILIARY_NATIVE_DEPS)

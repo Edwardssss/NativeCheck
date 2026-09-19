@@ -10,21 +10,22 @@
  * 1. **Strong signals use OR logic: prefer over-detection to under-detection.**
  *    At L1 a false negative costs far more than a false positive — a false
  *    positive at least shows up in the report, a false negative is total silence.
- * 2. **Transitive closure reverse lookup:** a native package may declare no
- *    native trait, but it **must depend on a build tool**. So when
- *    `prebuild-install` / `node-gyp-build` appears in the lockfile, looking
- *    backwards for "who depends on it" finds the native entry point while
- *    preserving the full dependency path.
+ * 2. **A dependency edge on a build tool is enough.** A native package may declare
+ *    no native trait at all, but it must depend on `node-gyp-build` /
+ *    `prebuild-install` / `nan` / … so the S3 edge signal is the entry-point
+ *    detector. "Who brought native into the project" is answered by the
+ *    dependency path, not by promoting a grandparent to a candidate: an earlier
+ *    "transitive closure reverse lookup" pass was removed because every
+ *    `deps[tool]` it looked for is already classified here (a package with a
+ *    tool edge can never reach that pass), so it never contributed a candidate.
  * 3. **SUSPICIOUS intermediate state:** never reduce to a native/not-native
  *    binary. When unsure, drop into SUSPICIOUS, rendered in neutral gray and
  *    excluded from risk statistics.
  */
 import { DistributionPattern, NativeVerdict, type Environment } from '../../core/model'
 import {
-  AUXILIARY_NATIVE_DEPS_SET,
   LEGACY_NATIVE_DEPS_SET,
   NAPI_HEADERS_SET,
-  NATIVE_BUILD_TOOLS_SET,
   PLATFORM_CLUSTER_THRESHOLD,
   PREBUILDIFY_LOADERS_SET,
   REMOTE_DOWNLOADERS_SET,
@@ -156,11 +157,6 @@ function hasPlatformCluster(pkg: LockfilePackage): boolean {
 }
 
 /** Whether a package hits the strong "build-tool dependency edge" signal (S3). */
-export function dependsOnBuildTool(pkg: LockfilePackage): boolean {
-  const deps = pkg.dependencies ?? {}
-  return Object.keys(deps).some((name) => NATIVE_BUILD_TOOLS_SET.has(name))
-}
-
 /** Native verdict for a single package, including the SUSPICIOUS intermediate state. */
 export function verdictFor(pkg: LockfilePackage, pattern: DistributionPattern): NativeVerdict {
   if (pattern !== DistributionPattern.NotNative) return NativeVerdict.Yes
@@ -175,11 +171,9 @@ export function verdictFor(pkg: LockfilePackage, pattern: DistributionPattern): 
 }
 
 /**
- * Run classification over the whole tree:
- * 1. walk every package and apply forward signals first (strong signals, OR logic);
- * 2. then run the transitive closure reverse lookup: walk dependency edges, find
- *    packages that depend on a build tool, and record the consumer closest to
- *    the project root on its **ancestor chain** as the native entry point.
+ * Run classification over the whole tree: apply the forward signals (dependency
+ * edges are S3, and they cover every build tool in the rule table — see the
+ * module header on why there is no separate reverse-lookup pass).
  *
  * When `options.env` is given, packages the current platform cannot install and
  * that are *only* reachable through optional dependencies are left out entirely
@@ -196,12 +190,7 @@ export function classifyGraph(
   const seen = new Set<string>()
   const env = options.env
 
-  const all = Object.values(graph.packages)
-
-  // Forward pass: packages hitting a strong signal qualify directly (excluding
-  // the project root — its platform dependencies describe "what it publishes",
-  // not "what compiling it requires"; see the note above classifyGraph).
-  for (const pkg of all) {
+  for (const pkg of Object.values(graph.packages)) {
     if (pkg.isRoot) continue
     const pattern = classifyPackage(pkg)
     const verdict = verdictFor(pkg, pattern)
@@ -219,54 +208,20 @@ export function classifyGraph(
     candidates.push({ pkg, pattern, verdict })
   }
 
-  // Reverse lookup: find build tools present in the tree, then look back for
-  // "who depends on them (directly or transitively)".
-  // Only packages not yet classified in the forward pass are handled, to avoid duplicates.
-  const reverseRoots = reverseLookupRoots(all)
-  for (const root of reverseRoots) {
-    if (root.pkg.isRoot) continue
-    const key = packageKey(root.pkg)
-    if (seen.has(key)) continue
-    seen.add(key)
-    candidates.push({ pkg: root.pkg, pattern: root.pattern, verdict: NativeVerdict.Yes })
-  }
-
   return { candidates, platformExcluded, networkCalls: 0 }
 }
 
-/** Locate native entry points backwards from build tools and infer their distribution pattern. */
-function reverseLookupRoots(all: readonly LockfilePackage[]): readonly NativeCandidate[] {
-  const roots: NativeCandidate[] = []
-  // First collect "build tool package names present in this tree" (S4).
-  // Auxiliary signals (node-abi / napi-build-utils) are deliberately excluded:
-  // they are pure-JS helper libraries consumed by downloaders/build scripts, so
-  // "depends on node-abi" must NOT flip a package to native — prebuild-install
-  // itself depends on node-abi and would otherwise be misreported as a native
-  // candidate (regression caught by the held-out buildtool-prebuild-install case).
-  const toolNames = new Set<string>()
-  for (const pkg of all) {
-    if (NATIVE_BUILD_TOOLS_SET.has(pkg.name) && !AUXILIARY_NATIVE_DEPS_SET.has(pkg.name)) {
-      toolNames.add(pkg.name)
-    }
-  }
-  // The tools themselves are not the entry points users care about; they are the reverse index
-  for (const tool of toolNames) {
-    for (const pkg of all) {
-      if (pkg.name === tool) continue
-      const deps = pkg.dependencies ?? {}
-      if (deps[tool]) {
-        // Infer the pattern from the tool
-        let pattern = DistributionPattern.NotNative
-        if (REMOTE_DOWNLOADERS_SET.has(tool)) {
-          pattern = DistributionPattern.RemoteDownload
-        } else if (tool === 'node-gyp-build') {
-          pattern = DistributionPattern.Prebuildify
-        } else if (tool === 'node-addon-api') {
-          pattern = DistributionPattern.Prebuildify
-        }
-        roots.push({ pkg, pattern, verdict: NativeVerdict.Yes })
-      }
-    }
-  }
-  return roots
-}
+/**
+ * Reverse lookup has been removed on purpose (2026-09 review).
+ *
+ * It walked `deps[tool]` and promoted the consumer to a candidate, but every
+ * package that has such an edge is already classified as B / C / D by
+ * `classifyPackage` above, so no package could ever reach it — the pass was
+ * unreachable code that three doc comments and one test claimed was the
+ * "transitive closure reverse lookup". It also was not transitive: it walked a
+ * single hop, so `A → B → prebuild-install` never surfaced `A`.
+ *
+ * The user-facing question behind it — "who brought this native dependency into
+ * my project" — is answered by the dependency path on each finding
+ * (`PackageRef.paths`, collected in ingest.ts).
+ */

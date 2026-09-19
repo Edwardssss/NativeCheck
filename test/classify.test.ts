@@ -121,7 +121,7 @@ describe('classifyPackage · 四种分发模式', () => {
   })
 })
 
-describe('classifyGraph · 反查与根排除', () => {
+describe('classifyGraph · 根排除与候选唯一性', () => {
   it('项目根不作为 native 候选（根的平台依赖描述发布，非安装）', () => {
     const graph: IngestedGraph = indexPackages([
       pkg({
@@ -142,8 +142,10 @@ describe('classifyGraph · 反查与根排除', () => {
     expect(result.candidates.map((c) => c.pkg.name)).not.toContain('my-app')
   })
 
-  it('native 包不声明特征、只传递依赖构建工具 → 反查仍能命中', () => {
-    // A → B → prebuild-install：B 直接消费工具，A 是真正入口
+  it('依赖构建工具的包由正向信号命中（不存在单独的反查层）', () => {
+    // A → B → prebuild-install：B 直接消费工具，S3 依赖边信号就能命中它。
+    // 旧实现里还有一层「反查」，但每个 deps[tool] 都会被 classifyPackage 先判成
+    // B/C/D，所以它从未产出过候选；而「谁把 native 带进来」由依赖链回答。
     const a = pkg({ name: 'legacy-addon', version: '1.4.2', dependencies: { db: { name: 'db' } } })
     const b = pkg({
       name: 'db',
@@ -152,11 +154,9 @@ describe('classifyGraph · 反查与根排除', () => {
     })
     const graph = indexPackages([a, b])
     const result = classifyGraph(graph)
-    // 直接消费者 db 被反查命中为 C
-    expect(result.candidates.some((c) => c.pkg.name === 'db')).toBe(true)
-    expect(result.candidates.find((c) => c.pkg.name === 'db')?.pattern).toBe(
-      DistributionPattern.RemoteDownload,
-    )
+    // 只有直接消费工具的 db 是 native 入口；legacy-addon 只是消费者。
+    expect(result.candidates.map((c) => c.pkg.name)).toEqual(['db'])
+    expect(result.candidates[0]?.pattern).toBe(DistributionPattern.RemoteDownload)
   })
 
   it('L1 恒零网络', () => {

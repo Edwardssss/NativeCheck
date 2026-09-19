@@ -109,7 +109,7 @@ v1 的平铺流程要求每个包都走完整（含网络）检查；NativeCheck
 
 ```text
 第 1 层 Ingest    用 arborist 读 lockfile · 采集五类信号     · 0 网络
-第 2 层 Classify  模式分类 A/B/C/D · 传递闭包反查           · 0 网络
+第 2 层 Classify  模式分类 A/B/C/D · 依赖边信号（S3）        · 0 网络
 第 3 层 Verify    流式 tar / HTTP HEAD（仅 --deep）         · 需网络
 第 4 层 Match     环境比对 → 策略 + 证据链 + 可靠性标注 + 风险
 ```
