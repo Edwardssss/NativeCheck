@@ -17,8 +17,8 @@ function pkg(
   return { pathChains: [[partial.name]], ...partial }
 }
 
-describe('classifyPackage · 四种分发模式', () => {
-  it('A：平台可选依赖簇（esbuild 式，26 个 genuinely-optional 子包）', () => {
+describe('classifyPackage · the four distribution patterns', () => {
+  it('A: platform optional-dependency cluster (esbuild style, 26 genuine optional deps)', () => {
     const esbuild = pkg({
       name: 'esbuild',
       version: '0.27.7',
@@ -32,7 +32,7 @@ describe('classifyPackage · 四种分发模式', () => {
     expect(classifyPackage(esbuild)).toBe(DistributionPattern.PlatformOptionalDeps)
   })
 
-  it('根项目大量普通 devDeps 不算簇（防误报，dev 边 optional=false）', () => {
+  it('a root with many plain devDeps is no cluster (anti-false-positive: dev edges optional=false)', () => {
     const root = pkg({
       name: 'my-app',
       version: '1.0.0',
@@ -47,7 +47,7 @@ describe('classifyPackage · 四种分发模式', () => {
     expect(classifyPackage(root)).toBe(DistributionPattern.NotNative)
   })
 
-  it('B：依赖 node-gyp-build（bcrypt 式）→ Prebuildify', () => {
+  it('B: depends on node-gyp-build (bcrypt style) → Prebuildify', () => {
     const bcrypt = pkg({
       name: 'bcrypt',
       version: '6.0.0',
@@ -56,7 +56,7 @@ describe('classifyPackage · 四种分发模式', () => {
     expect(classifyPackage(bcrypt)).toBe(DistributionPattern.Prebuildify)
   })
 
-  it('B：better-sqlite3@13 只有 node-addon-api → Prebuildify', () => {
+  it('B: better-sqlite3@13 with only node-addon-api → Prebuildify', () => {
     const bs3 = pkg({
       name: 'better-sqlite3',
       version: '13.0.3',
@@ -65,7 +65,7 @@ describe('classifyPackage · 四种分发模式', () => {
     expect(classifyPackage(bs3)).toBe(DistributionPattern.Prebuildify)
   })
 
-  it('D：node-addon-api + install 脚本（node-pty 的 node-gyp rebuild）→ SourceOnly', () => {
+  it('D: node-addon-api + install script (node-pty and its node-gyp rebuild) → SourceOnly', () => {
     const nodePty = pkg({
       name: 'node-pty',
       version: '1.1.0',
@@ -75,7 +75,7 @@ describe('classifyPackage · 四种分发模式', () => {
     expect(classifyPackage(nodePty)).toBe(DistributionPattern.SourceOnly)
   })
 
-  it('C：依赖 prebuild-install（canvas 式）→ RemoteDownload', () => {
+  it('C: depends on prebuild-install (canvas style) → RemoteDownload', () => {
     const canvas = pkg({
       name: 'canvas',
       version: '3.2.3',
@@ -84,7 +84,7 @@ describe('classifyPackage · 四种分发模式', () => {
     expect(classifyPackage(canvas)).toBe(DistributionPattern.RemoteDownload)
   })
 
-  it('C：依赖 @mapbox/node-pre-gyp（bcrypt@5 式）→ RemoteDownload（不误判 B）', () => {
+  it('C: depends on @mapbox/node-pre-gyp (bcrypt@5 style) → RemoteDownload (not misread as B)', () => {
     const bcrypt5 = pkg({
       name: 'bcrypt',
       version: '5.1.1',
@@ -96,7 +96,7 @@ describe('classifyPackage · 四种分发模式', () => {
     expect(classifyPackage(bcrypt5)).toBe(DistributionPattern.RemoteDownload)
   })
 
-  it('C：依赖 node-pre-gyp（bcrypt@3 式）→ RemoteDownload', () => {
+  it('C: depends on node-pre-gyp (bcrypt@3 style) → RemoteDownload', () => {
     const bcrypt3 = pkg({
       name: 'bcrypt',
       version: '3.0.8',
@@ -105,7 +105,7 @@ describe('classifyPackage · 四种分发模式', () => {
     expect(classifyPackage(bcrypt3)).toBe(DistributionPattern.RemoteDownload)
   })
 
-  it('D：依赖 nan / bindings（老式）→ SourceOnly', () => {
+  it('D: depends on nan / bindings (legacy) → SourceOnly', () => {
     const legacy = pkg({
       name: 'node-sass',
       version: '9.0.0',
@@ -114,15 +114,15 @@ describe('classifyPackage · 四种分发模式', () => {
     expect(classifyPackage(legacy)).toBe(DistributionPattern.SourceOnly)
   })
 
-  it('纯 JS 无信号 → NotNative', () => {
+  it('pure JS with no signal → NotNative', () => {
     expect(classifyPackage(pkg({ name: 'lodash', version: '4.18.1' }))).toBe(
       DistributionPattern.NotNative,
     )
   })
 })
 
-describe('classifyGraph · 根排除与候选唯一性', () => {
-  it('项目根不作为 native 候选（根的平台依赖描述发布，非安装）', () => {
+describe('classifyGraph · root exclusion and candidate uniqueness', () => {
+  it('the project root is never a candidate (its platform deps describe publishing, not installing)', () => {
     const graph: IngestedGraph = indexPackages([
       pkg({
         name: 'my-app',
@@ -142,10 +142,10 @@ describe('classifyGraph · 根排除与候选唯一性', () => {
     expect(result.candidates.map((c) => c.pkg.name)).not.toContain('my-app')
   })
 
-  it('依赖构建工具的包由正向信号命中（不存在单独的反查层）', () => {
-    // A → B → prebuild-install：B 直接消费工具，S3 依赖边信号就能命中它。
-    // 旧实现里还有一层「反查」，但每个 deps[tool] 都会被 classifyPackage 先判成
-    // B/C/D，所以它从未产出过候选；而「谁把 native 带进来」由依赖链回答。
+  it('packages depending on a build tool are caught by forward signals (no reverse-lookup layer)', () => {
+    // A → B → prebuild-install: B consumes the tool directly, so the S3 dependency-edge
+    // signal catches it. The old "reverse lookup" layer never produced a candidate, because
+    // classifyPackage judges every deps[tool] as B/C/D first; the chain answers "who pulled it in".
     const a = pkg({ name: 'legacy-addon', version: '1.4.2', dependencies: { db: { name: 'db' } } })
     const b = pkg({
       name: 'db',
@@ -154,12 +154,12 @@ describe('classifyGraph · 根排除与候选唯一性', () => {
     })
     const graph = indexPackages([a, b])
     const result = classifyGraph(graph)
-    // 只有直接消费工具的 db 是 native 入口；legacy-addon 只是消费者。
+    // Only db, which consumes the tool directly, is a native entry; legacy-addon just consumes.
     expect(result.candidates.map((c) => c.pkg.name)).toEqual(['db'])
     expect(result.candidates[0]?.pattern).toBe(DistributionPattern.RemoteDownload)
   })
 
-  it('L1 恒零网络', () => {
+  it('L1 always reports zero network calls', () => {
     const graph = indexPackages([pkg({ name: 'a', version: '1.0.0' })])
     expect(classifyGraph(graph).networkCalls).toBe(0)
   })

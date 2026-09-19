@@ -4,7 +4,7 @@
  * Core knows nothing about npm / pip / Cargo internals — it only understands
  * the model defined here; ecosystems are just Adapters (see `src/adapters/node`).
  *
- * Maps to design doc: `temp/NativeCheck_项目实施方案.md` §9
+ * Maps to design doc §9
  */
 
 /** Supported ecosystems. V0.1 implements node only. */
@@ -48,7 +48,7 @@ export interface PackageRef {
 /**
  * Distribution pattern — the key abstraction missing from the v1 design.
  *
- * See `temp/NativeCheck_项目实施方案.md` §5, §9.1
+ * See design doc §5, §9.1
  */
 export enum DistributionPattern {
   /** A: main package + N `os`/`cpu` constrained binary sub-packages (esbuild, sharp, swc…). 100% detectable with zero network. */

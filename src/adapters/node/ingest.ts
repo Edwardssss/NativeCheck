@@ -221,7 +221,7 @@ export async function ingest(projectRoot: string): Promise<IngestOutcome> {
     }
   }
 
-  // pnpm：无 arborist，直接解析 pnpm-lock.yaml（packages + snapshots）。
+  // pnpm: no arborist here — parse pnpm-lock.yaml directly (packages + snapshots).
   if (probe.detected === 'pnpm-lock.yaml') {
     try {
       const content = readFileSync(join(projectRoot, 'pnpm-lock.yaml'), 'utf8')
@@ -243,7 +243,7 @@ export async function ingest(projectRoot: string): Promise<IngestOutcome> {
     }
   }
 
-  // yarn.lock（v1 classic + Berry）：行式缩进格式，非 YAML/JSON。
+  // yarn.lock (v1 classic + Berry): a line-oriented, indented format, not YAML/JSON.
   if (probe.detected === 'yarn.lock') {
     try {
       const content = readFileSync(join(projectRoot, 'yarn.lock'), 'utf8')
@@ -265,7 +265,7 @@ export async function ingest(projectRoot: string): Promise<IngestOutcome> {
     }
   }
 
-  // bun.lockb：二进制，经 @hyrious/bun.lockb 解码为 yarn v1 文本再解析。
+  // bun.lockb: binary — decoded into yarn v1 text via @hyrious/bun.lockb, then parsed.
   if (probe.detected === 'bun.lockb') {
     try {
       const buf = readFileSync(join(projectRoot, 'bun.lockb'))

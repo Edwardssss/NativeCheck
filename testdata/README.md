@@ -1,9 +1,13 @@
 # testdata/
 
-真实安装结果与评测基线的数据目录（不入库运行时产物，只入库脚本/约定）。
+Data directory for real install results and the accuracy baseline. Only scripts
+and conventions are committed; runtime artifacts stay out of git.
 
-- `ground-truth/` —— 方案 §13 的 Ground Truth Docker matrix。
-  详细用法见该目录下的 [`README.md`](./ground-truth/README.md)：
-  编译器 wrapper 采集 + Node{20,22,24}×libc{glibc,musl} Docker matrix + L1/L2/L3 四格表。
+- `ground-truth/` — the Ground Truth Docker matrix. See
+  [`ground-truth/README.md`](./ground-truth/README.md) for the full workflow:
+  compiler-wrapper measurement, a Node{20,22,24} × libc{glibc,musl} matrix, and
+  the L1 / L2 / L3 tables.
+- `windows/` — the same idea for Windows, run natively rather than in Docker.
 
-> 没有测量就没有改善 —— 这是最容易被跳过、但最关键的一步。
+> No measurement, no improvement. It is the easiest step to skip and the most
+> important one not to.

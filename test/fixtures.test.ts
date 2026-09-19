@@ -18,10 +18,10 @@ import { fileURLToPath } from 'node:url'
 import { scan } from '../src/adapters/node/pipeline'
 import type { Environment } from '../src/core/model'
 
-// fixtures/ 的绝对路径（本测试文件在 test/ 下，fixtures 在其同级）
+// Absolute path to fixtures/ (this test file lives in test/, fixtures is its sibling)
 const fixturesRoot = join(fileURLToPath(new URL('.', import.meta.url)), '..', 'fixtures')
 
-/** 固定注入环境：linux-x64 + glibc + 齐全工具链。判定只依赖 A/B/C/D 的依赖边信号。 */
+/** Fixed env: linux-x64 + glibc + full toolchain. Decisions rest on A/B/C/D edge signals. */
 const env: Environment = {
   os: 'linux',
   arch: 'x64',
@@ -46,7 +46,7 @@ interface Expected {
   networkCalls: number
 }
 
-/** 递归收集所有含 expected.yaml 的 fixture 样本目录。 */
+/** Recursively collect every fixture sample directory that contains expected.yaml. */
 function collectCases(root: string): string[] {
   const out: string[] = []
   const walk = (dir: string): void => {
@@ -59,11 +59,11 @@ function collectCases(root: string): string[] {
   return out.sort()
 }
 
-/** 极简 YAML 子集解析：`key: value`，支持 `#` 行内注释与行注释。够 expected.yaml 用。 */
+/** Minimal YAML subset: `key: value` with `#` comments. Enough for expected.yaml. */
 function parseExpected(text: string): Expected {
   const e: Expected = { networkCalls: 0 }
   for (const rawLine of text.split('\n')) {
-    const line = rawLine.split('#')[0] ?? '' // 去掉注释
+    const line = rawLine.split('#')[0] ?? '' // strip the comment
     const m = /^\s*([A-Za-z_][A-Za-z0-9_]*)\s*:\s*(.*?)\s*$/.exec(line)
     if (!m) continue
     const key = m[1] as string
@@ -106,9 +106,9 @@ function parseExpected(text: string): Expected {
 
 const cases = collectCases(fixturesRoot)
 
-describe('fixture-runner（零网络回归）', () => {
-  // 至少要有真实样本被加载，防止静默漏测（fixture 空跑 = 无回归保护）。
-  it('收集到真实样本（防空跑）', () => {
+describe('fixture-runner (zero-network regression)', () => {
+  // At least one real sample must load; an empty run would mean no regression cover at all.
+  it('collects real samples (guards against an empty run)', () => {
     expect(cases.length).toBeGreaterThan(0)
   })
 
@@ -119,26 +119,26 @@ describe('fixture-runner（零网络回归）', () => {
     it(`${label}`, async () => {
       const { report, unsupported } = await scan(dir, { mode: 'fast', env })
 
-      // 零网络铁律：fast 恒 0 网络。
+      // Zero-network iron rule: fast always reports 0 network calls.
       expect(report.summary.networkCalls).toBe(exp.networkCalls)
 
       if (exp.unsupported) {
-        // Fail Closed：不支持格式给出明确退出信息。
+        // Fail Closed: an unsupported format gives an explicit exit message.
         expect(unsupported).toBeDefined()
         expect(unsupported?.detected).toBe(exp.detected)
         if (exp.reasonContains) expect(unsupported?.reason).toContain(exp.reasonContains)
         return
       }
 
-      // 不支持格式不应混进来；否则视为误判。
+      // An unsupported format must not slip through here; if it does, this is a misjudgement.
       expect(unsupported).toBeUndefined()
 
       if (typeof exp.nativeCount === 'number') {
-        // 对照组：断言候选总数。
+        // Control group: assert the total candidate count.
         expect(report.summary.nativeCandidates).toBe(exp.nativeCount)
       }
 
-      // 定位目标 finding：有 subject 用 subject 匹配；否则唯一 native 候选。
+      // Locate the target finding: match by subject when given, else the single candidate.
       const targets = report.findings.filter(
         (f) => f.verdict === 'YES' || f.verdict === 'SUSPICIOUS',
       )
@@ -150,7 +150,7 @@ describe('fixture-runner（零网络回归）', () => {
       if (exp.pattern || exp.strategy || exp.risk) {
         expect(
           target,
-          `应找到 native 候选（dir=${label} subject=${exp.subject ?? '(单候选)'}）`,
+          `expected a native candidate (dir=${label} subject=${exp.subject ?? '(single candidate)'})`,
         ).toBeDefined()
       }
 
@@ -158,7 +158,7 @@ describe('fixture-runner（零网络回归）', () => {
       if (exp.strategy) expect(target?.strategy).toBe(exp.strategy)
       if (exp.risk) expect(target?.risk).toBe(exp.risk)
 
-      // native:true 语义 = 存在被判定为 native 的候选；native:false = 无。
+      // native:true means a candidate was judged native; native:false means there is none.
       if (exp.native === true) expect(targets.length).toBeGreaterThan(0)
       if (exp.native === false) expect(targets.length).toBe(0)
     })

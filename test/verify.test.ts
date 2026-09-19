@@ -57,7 +57,7 @@ function candidateFor(p: LockfilePackage): NativeCandidate {
   return { pkg: p, pattern, verdict: NativeVerdict.Yes }
 }
 
-/** 构造含指定平台 .node 的 npm 布局 tarball 字节（file 可含子目录）。 */
+/** Build npm-layout tarball bytes containing a .node for the given platform (entries may include subdirectories). */
 async function tarForPlatforms(platforms: string[]): Promise<Uint8Array> {
   const { mkdtemp, mkdir, writeFile, rm, readFile } = await import('node:fs/promises')
   const { tmpdir } = await import('node:os')
@@ -82,7 +82,7 @@ async function tarForPlatforms(platforms: string[]): Promise<Uint8Array> {
 }
 
 describe('patternNeedsNetwork', () => {
-  it('只有 B / C 需要联网取证', () => {
+  it('only B / C need network verification', () => {
     expect(patternNeedsNetwork(DistributionPattern.Prebuildify)).toBe(true)
     expect(patternNeedsNetwork(DistributionPattern.RemoteDownload)).toBe(true)
     expect(patternNeedsNetwork(DistributionPattern.PlatformOptionalDeps)).toBe(false)
@@ -91,7 +91,7 @@ describe('patternNeedsNetwork', () => {
 })
 
 describe('candidateNeedsNetwork', () => {
-  it('SUSPICIOUS + NotNative（有 install 脚本）也需取证', () => {
+  it('SUSPICIOUS + NotNative (has an install script) also needs verification', () => {
     const cand = {
       pkg: pkg({ name: 'core-js', version: '3.50.0', hasInstallScript: true }),
       pattern: DistributionPattern.NotNative,
@@ -100,7 +100,7 @@ describe('candidateNeedsNetwork', () => {
     expect(candidateNeedsNetwork(cand)).toBe(true)
   })
 
-  it('NotNative + No（纯 JS 无脚本）无需取证', () => {
+  it('NotNative + No (pure JS, no script) needs none', () => {
     const cand = {
       pkg: pkg({ name: 'lodash', version: '4.18.1' }),
       pattern: DistributionPattern.NotNative,
@@ -109,7 +109,7 @@ describe('candidateNeedsNetwork', () => {
     expect(candidateNeedsNetwork(cand)).toBe(false)
   })
 
-  it('B / C 恒需，A / D 无需', () => {
+  it('B / C always need it, A / D never do', () => {
     expect(
       candidateNeedsNetwork(
         candidateFor(
@@ -127,8 +127,8 @@ describe('candidateNeedsNetwork', () => {
   })
 })
 
-describe('verifyCandidate · 模式 B', () => {
-  it('老式平铺产物无 ABI 标注 → b.status=unknown（不再乐观判 matched）', async () => {
+describe('verifyCandidate · pattern B', () => {
+  it('a legacy flat artifact without an ABI marker → b.status=unknown (no longer optimistically matched)', async () => {
     const tarBytes = await tarForPlatforms(['linux-x64', 'win32-x64'])
     const fetchImpl: HttpLike = async (url: string) => {
       if (url.includes('registry.npmjs.org/better-sqlite3/')) {
@@ -149,7 +149,7 @@ describe('verifyCandidate · 模式 B', () => {
     expect(o.networkCalls).toBe(2)
   })
 
-  it('N-API 产物 → b.status=matched，2 次网络', async () => {
+  it('an N-API artifact → b.status=matched, 2 network calls', async () => {
     const tarBytes = await tarForPlatforms(['linux-x64/node.napi'])
     const fetchImpl: HttpLike = async (url: string) => {
       if (url.includes('registry.npmjs.org/better-sqlite3/')) {
@@ -169,7 +169,7 @@ describe('verifyCandidate · 模式 B', () => {
     expect(o.networkCalls).toBe(2)
   })
 
-  it('读完整包仍无本平台 → b.status=absent', async () => {
+  it('reading the whole package and still finding nothing for this platform → b.status=absent', async () => {
     const tarBytes = await tarForPlatforms(['win32-x64'])
     const fetchImpl: HttpLike = async (url: string) =>
       url.includes('registry.npmjs.org')
@@ -182,9 +182,9 @@ describe('verifyCandidate · 模式 B', () => {
     expect(o.b?.status).toBe('absent')
   })
 
-  it('bcrypt --napi 产物（bcrypt.glibc.node 无 ABI 标注）→ matched', async () => {
-    // bcrypt@6 构建脚本 `prebuildify --napi --tag-libc`：产物是 N-API（跨 ABI），
-    // 文件名被 tag-libc 改成 bcrypt.glibc.node、丢了 napi 标记 → 应靠 build 信号判 match。
+  it('a bcrypt --napi artifact (bcrypt.glibc.node without an ABI marker) → matched', async () => {
+    // bcrypt@6 builds with `prebuildify --napi --tag-libc`: the artifact is N-API (stable
+    // across ABIs), but --tag-libc renames it to bcrypt.glibc.node and drops the napi
     const tarBytes = await tarForPlatforms(['linux-x64/bcrypt.glibc'])
     const fetchImpl: HttpLike = async (url: string) =>
       url.includes('registry.npmjs.org')
@@ -204,7 +204,7 @@ describe('verifyCandidate · 模式 B', () => {
     expect(o.networkCalls).toBe(2)
   })
 
-  it('模式 B manifest 拉取异常不抛 → b.status=unknown（网络波动不当作缺失）', async () => {
+  it('pattern B: a failing manifest fetch does not throw → b.status=unknown (network trouble is not absence)', async () => {
     const fetchImpl: HttpLike = async () => {
       throw new Error('ETIMEDOUT')
     }
@@ -220,7 +220,7 @@ describe('verifyCandidate · 模式 B', () => {
     expect(o.networkCalls).toBe(1)
   })
 
-  it('模式 B tarball 拉取失败不抛 → b.status=unknown', async () => {
+  it('pattern B: a failing tarball fetch does not throw → b.status=unknown', async () => {
     const fetchImpl: HttpLike = async (url: string) =>
       url.includes('registry.npmjs.org')
         ? body(200, JSON.stringify({ dist: { tarball: 'https://t/x.tgz' } }))
@@ -238,11 +238,11 @@ describe('verifyCandidate · 模式 B', () => {
   })
 })
 
-describe('verifyCandidate · 模式 C', () => {
+describe('verifyCandidate · pattern C', () => {
   const canvasPkg = () =>
     pkg({ name: 'canvas', version: '3.2.0', dependencies: deps({ 'prebuild-install': '^7' }) })
 
-  /** canvas 的 registry manifest：napi 运行时 + Automattic/node-canvas 仓库。 */
+  /** canvas registry manifest: napi runtime plus the Automattic/node-canvas repository. */
   const canvasManifest = JSON.stringify({
     dist: { tarball: 'https://t/canvas.tgz' },
     binary: { napi_versions: [7] },
@@ -251,7 +251,7 @@ describe('verifyCandidate · 模式 C', () => {
     scripts: { install: 'prebuild-install -r napi || node-gyp rebuild' },
   })
 
-  it('HEAD 200 → remote=prebuilt，2 次网络，URL 用真实仓库而非 github.com/canvas', async () => {
+  it('HEAD 200 → remote=prebuilt, 2 network calls, URL built from the real repository rather than github.com/canvas', async () => {
     const fetchImpl: HttpLike = async (url: string, init?: { method?: string }) => {
       if (url.includes('registry.npmjs.org')) return body(200, canvasManifest)
       expect(init?.method).toBe('HEAD')
@@ -275,7 +275,7 @@ describe('verifyCandidate · 模式 C', () => {
     expect(o.networkCalls).toBe(2)
   })
 
-  it('manifest 拉取异常不抛 → remote=unverified', async () => {
+  it('a failing manifest fetch does not throw → remote=unverified', async () => {
     const fetchImpl: HttpLike = async () => {
       throw new Error('ETIMEDOUT')
     }
@@ -284,7 +284,7 @@ describe('verifyCandidate · 模式 C', () => {
     expect(o.networkCalls).toBe(1)
   })
 
-  it('manifest 缺仓库 → 推导不出 URL → remote=unverified（不猜 github.com/{name}）', async () => {
+  it('a manifest without a repository → no URL derivable → remote=unverified (never guesses github.com/{name})', async () => {
     const fetchImpl: HttpLike = async (url: string) =>
       url.includes('registry.npmjs.org')
         ? body(200, JSON.stringify({ dist: { tarball: 'https://t/x.tgz' } }))
@@ -295,15 +295,15 @@ describe('verifyCandidate · 模式 C', () => {
   })
 })
 
-describe('verifyCandidate · SUSPICIOUS install 脚本取证', () => {
-  /** 构造 SUSPICIOUS + NotNative 候选（有 install 脚本、无任何 native 依赖信号）。 */
+describe('verifyCandidate · SUSPICIOUS install-script forensics', () => {
+  /** Build a SUSPICIOUS + NotNative candidate (an install script, no native dependency signal). */
   const suspicious = (name: string, version: string): NativeCandidate => ({
     pkg: pkg({ name, version, hasInstallScript: true }),
     pattern: DistributionPattern.NotNative,
     verdict: NativeVerdict.Suspicious,
   })
 
-  it('core-js 式 benign postinstall（node -e）→ intent=select，1 次网络', async () => {
+  it('a core-js style benign postinstall (node -e) → intent=select, 1 network call', async () => {
     const fetchImpl: HttpLike = async () =>
       body(
         200,
@@ -317,7 +317,7 @@ describe('verifyCandidate · SUSPICIOUS install 脚本取证', () => {
     expect(o.networkCalls).toBe(1)
   })
 
-  it('install 脚本含 node-gyp rebuild → intent=compile，1 次网络', async () => {
+  it('an install script containing node-gyp rebuild → intent=compile, 1 network call', async () => {
     const fetchImpl: HttpLike = async () =>
       body(
         200,
@@ -331,7 +331,7 @@ describe('verifyCandidate · SUSPICIOUS install 脚本取证', () => {
     expect(o.networkCalls).toBe(1)
   })
 
-  it('install 脚本含 prebuild-install → intent=download 且继续 HEAD 探远端，2 次网络', async () => {
+  it('an install script containing prebuild-install → intent=download, then a HEAD probe, 2 network calls', async () => {
     const fetchImpl: HttpLike = async (url: string, init?: { method?: string }) => {
       if (url.includes('registry.npmjs.org')) {
         return body(
@@ -352,9 +352,9 @@ describe('verifyCandidate · SUSPICIOUS install 脚本取证', () => {
     expect(o.networkCalls).toBe(2)
   })
 
-  it('跨 hook：install=download + postinstall=compile → intent=compile（§1.4 修复）', async () => {
-    // install 下载 + postinstall 编译是两个都要执行的独立 hook；此前用 `||` 拼接
-    // 误读成 download_then_compile（fallback），修复后正确合并为 compile（编译是终态）。
+  it('across hooks: install=download + postinstall=compile → intent=compile', async () => {
+    // Downloading in install and compiling in postinstall are two independent hooks that
+    // both run. Joining them with `||` used to read as download_then_compile (a fallback);
     const fetchImpl: HttpLike = async () =>
       body(
         200,
@@ -369,9 +369,9 @@ describe('verifyCandidate · SUSPICIOUS install 脚本取证', () => {
     expect(o.networkCalls).toBe(1)
   })
 
-  it('preinstall 里的 node-gyp rebuild 也被解析（此前 preinstall 完全被忽略）', async () => {
-    // npm 依次执行 preinstall → install → postinstall，三者都会跑。只看 install /
-    // postinstall 时，只有 preinstall 的包会永远停在 AMBIGUOUS。
+  it('node-gyp rebuild inside preinstall is parsed too (preinstall used to be ignored outright)', async () => {
+    // npm runs preinstall → install → postinstall in order, and all three run. Looking
+    // only at install / postinstall leaves a preinstall-only package at AMBIGUOUS forever.
     const fetchImpl: HttpLike = async () =>
       body(
         200,
@@ -386,7 +386,7 @@ describe('verifyCandidate · SUSPICIOUS install 脚本取证', () => {
     expect(o.networkCalls).toBe(1)
   })
 
-  it('跨 hook：preinstall=download + install=compile → intent=compile（按严重度合并）', async () => {
+  it('across hooks: preinstall=download + install=compile → intent=compile (merged by severity)', async () => {
     const fetchImpl: HttpLike = async () =>
       body(
         200,
@@ -397,11 +397,11 @@ describe('verifyCandidate · SUSPICIOUS install 脚本取证', () => {
       )
     const o = await verifyCandidate(suspicious('three-hooks', '1.0.0'), env, fetchImpl)
     expect(o.installScript?.intent).toBe('compile')
-    // 顺序保留 npm 的执行顺序（preinstall → install → postinstall）
+    // order preserved: the order npm runs them in (preinstall → install → postinstall)
     expect(o.installScript?.script).toBe('prebuild-install ; node-gyp rebuild')
   })
 
-  it('manifest 拉取异常不抛 → 无 installScript，1 次网络', async () => {
+  it('a failing manifest fetch does not throw → no installScript, 1 network call', async () => {
     const fetchImpl: HttpLike = async () => {
       throw new Error('ETIMEDOUT')
     }
@@ -411,11 +411,11 @@ describe('verifyCandidate · SUSPICIOUS install 脚本取证', () => {
   })
 })
 
-/* match.ts 的 verify 折叠 */
+/* verify folding inside match.ts */
 function matchWith(cand: NativeCandidate, verify?: VerifyOutcome) {
   return matchCandidate({ candidate: cand, env, verify })
 }
-describe('matchCandidate · 模式 B verify 折叠', () => {
+describe('matchCandidate · pattern B verify folding', () => {
   const bCand = () =>
     candidateFor(
       pkg({
@@ -425,13 +425,13 @@ describe('matchCandidate · 模式 B verify 折叠', () => {
       }),
     )
 
-  it('fast（无 verify）→ UNVERIFIED + resolveHint', () => {
+  it('fast (no verify) → UNVERIFIED + resolveHint', () => {
     const f = matchWith(bCand())
     expect(f.risk).toBe(RiskLevel.UNVERIFIED)
     expect(f.resolveHint).toBeTruthy()
     expect(f.strategy).toBe(InstallStrategy.Prebuilt)
   })
-  it('deep 命中 → LOW / PREBUILT，含 artifact', () => {
+  it('deep hit → LOW / PREBUILT, with an artifact', () => {
     const f = matchWith(bCand(), {
       b: { status: 'matched', observed: ['linux-x64.node'] },
       networkCalls: 2,
@@ -441,7 +441,7 @@ describe('matchCandidate · 模式 B verify 折叠', () => {
     expect(f.artifacts.some((a) => a.platform === 'linux' && a.arch === 'x64')).toBe(true)
     expect(f.resolveHint).toBeUndefined()
   })
-  it('deep 读完整包未命中 + 工具链齐全 → MEDIUM / SOURCE_BUILD', () => {
+  it('deep reads the whole package without a hit, toolchain complete → MEDIUM / SOURCE_BUILD', () => {
     const f = matchWith(bCand(), {
       b: { status: 'absent', observed: ['win32-x64.node'] },
       networkCalls: 2,
@@ -449,7 +449,7 @@ describe('matchCandidate · 模式 B verify 折叠', () => {
     expect(f.strategy).toBe(InstallStrategy.SourceBuild)
     expect(f.risk).toBe(RiskLevel.MEDIUM)
   })
-  it('deep 未命中 + 缺编译器 → HIGH / blocker', () => {
+  it('deep miss + no compiler → HIGH / blocker', () => {
     const noCompiler: Environment = { ...env, compiler: undefined }
     const f = matchCandidate({
       candidate: bCand(),
@@ -459,7 +459,7 @@ describe('matchCandidate · 模式 B verify 折叠', () => {
     expect(f.risk).toBe(RiskLevel.HIGH)
     expect(f.blockers.some((b) => b.name === 'C/C++ compiler')).toBe(true)
   })
-  it('deep 取证触顶 unknown → 保持 UNVERIFIED（绝不当作缺失降级）', () => {
+  it('deep verification hit its budget (unknown) → stays UNVERIFIED (never downgraded to missing)', () => {
     const f = matchWith(bCand(), {
       b: { status: 'unknown', observed: [] },
       networkCalls: 2,
@@ -470,7 +470,7 @@ describe('matchCandidate · 模式 B verify 折叠', () => {
   })
 })
 
-describe('matchCandidate · 模式 C verify 折叠', () => {
+describe('matchCandidate · pattern C verify folding', () => {
   const cCand = () =>
     candidateFor(
       pkg({ name: 'canvas', version: '3.2.0', dependencies: deps({ 'prebuild-install': '^7' }) }),
@@ -484,14 +484,14 @@ describe('matchCandidate · 模式 C verify 折叠', () => {
     expect(f.risk).toBe(RiskLevel.LOW)
     expect(f.strategy).toBe(InstallStrategy.Prebuilt)
   })
-  it('HEAD 200 + 缺编译器 → fallback 附注列出 C/C++ 编译器阻塞（下载失败退编译会失败）', () => {
+  it('HEAD 200 + no compiler → the fallback note lists the C/C++ compiler blocker (a failed download would compile and fail)', () => {
     const noCompiler: Environment = { ...env, compiler: undefined }
     const f = matchCandidate({
       candidate: cCand(),
       env: noCompiler,
       verify: { remote: 'prebuilt', networkCalls: 1 },
     })
-    expect(f.risk).toBe(RiskLevel.LOW) // 主路径仍免编
+    expect(f.risk).toBe(RiskLevel.LOW) // the main path still needs no compile
     expect(f.fallback).toBeDefined()
     expect(f.fallback?.blockers.map((b) => b.name)).toContain('C/C++ compiler')
   })
@@ -500,16 +500,16 @@ describe('matchCandidate · 模式 C verify 折叠', () => {
     expect(f.risk).toBe(RiskLevel.MEDIUM)
     expect(f.strategy).toBe(InstallStrategy.SourceBuild)
   })
-  it('HEAD 未验证 → 保持 UNVERIFIED（不把网络波动当危险）', () => {
+  it('HEAD unverified → stays UNVERIFIED (network trouble is not danger)', () => {
     expect(matchWith(cCand(), { remote: 'unverified', networkCalls: 1 }).risk).toBe(
       RiskLevel.UNVERIFIED,
     )
   })
 })
 
-/* pipeline 胶水：buildFindings（deep 才取证，fast 恒零网络） */
-describe('buildFindings · deep 胶水', () => {
-  it('fast：B/C 不取证，恒零网络，落到 UNVERIFIED', async () => {
+/* pipeline glue: buildFindings (verifies only under --deep, always zero network under fast) */
+describe('buildFindings · deep glue', () => {
+  it('fast: B/C are not verified, network stays at zero, they land on UNVERIFIED', async () => {
     const bCand = candidateFor(
       pkg({
         name: 'better-sqlite3',
@@ -522,7 +522,7 @@ describe('buildFindings · deep 胶水', () => {
     expect(findings[0]?.risk).toBe(RiskLevel.UNVERIFIED)
   })
 
-  it('deep + mock 命中 → 网络计数 + LOW', async () => {
+  it('deep + a mocked hit → network counted + LOW', async () => {
     const tarBytes = await tarForPlatforms(['linux-x64/node.napi'])
     const fetchImpl: HttpLike = async (url: string) =>
       url.includes('registry.npmjs.org')
@@ -543,7 +543,7 @@ describe('buildFindings · deep 胶水', () => {
     expect(findings[0]?.risk).toBe(RiskLevel.LOW)
   })
 
-  it('deep + 混合候选：只对 B/C 计数，A 类不动网络', async () => {
+  it('deep + mixed candidates: only B/C are counted, pattern A never touches the network', async () => {
     const tarBytes = await tarForPlatforms(['linux-x64/node.napi'])
     const fetchImpl: HttpLike = async (url: string) =>
       url.includes('registry.npmjs.org')
@@ -573,15 +573,15 @@ describe('buildFindings · deep 胶水', () => {
       deep: true,
       fetchImpl,
     })
-    expect(networkCalls).toBe(2) // 只有 B 产生 2 次，A 是 0
+    expect(networkCalls).toBe(2) // only B produces 2 calls, A produces 0
     const aFinding = findings.find((f) => f.pkg.name === 'esbuild')
     const bFinding = findings.find((f) => f.pkg.name === 'better-sqlite3')
-    expect(aFinding?.risk).toBe(RiskLevel.LOW) // 平台可选依赖簇 → LOW（无网络）
-    expect(bFinding?.risk).toBe(RiskLevel.LOW) // 命中 → LOW
+    expect(aFinding?.risk).toBe(RiskLevel.LOW) // platform optional cluster → LOW (no network)
+    expect(bFinding?.risk).toBe(RiskLevel.LOW) // hit → LOW
   })
 })
 
-/** 便捷构造一个 HttpLike 响应。 */
+/** Build an HttpLike response. */
 async function body(
   status: number,
   text?: string,
@@ -598,8 +598,8 @@ async function body(
   return { status, ok: status >= 200 && status < 300, body: stream }
 }
 
-/* pipeline 缓存胶水：冷跑写盘 → 温跑命中零网络 */
-describe('buildFindings · deep 磁盘缓存', () => {
+/* pipeline cache glue: a cold run writes to disk, a warm run hits it with zero network */
+describe('buildFindings · deep on-disk cache', () => {
   const bCand = () =>
     candidateFor(
       pkg({
@@ -608,7 +608,7 @@ describe('buildFindings · deep 磁盘缓存', () => {
         dependencies: deps({ 'node-addon-api': '^8' }),
       }),
     )
-  /** 带请求计数器的 mock fetch：registry GET + tarball GET。 */
+  /** A mock fetch that counts requests: a registry GET plus a tarball GET. */
   function countingFetch(tarBytes: Uint8Array): { fetch: HttpLike; count: () => number } {
     let n = 0
     const fetch: HttpLike = async (url: string) => {
@@ -619,7 +619,7 @@ describe('buildFindings · deep 磁盘缓存', () => {
     }
     return { fetch, count: () => n }
   }
-  /** 内存盘 + 可控时钟的缓存上下文。 */
+  /** A cache context with an in-memory disk and a controllable clock. */
   function memCache(nowMs = 10_000) {
     const disk = new Map<string, string>()
     let now = nowMs
@@ -644,12 +644,12 @@ describe('buildFindings · deep 磁盘缓存', () => {
     }
   }
 
-  it('冷跑：网络 2 次 + 结果落盘；温跑：命中缓存 → 零网络且结论一致', async () => {
+  it('cold run: 2 network calls and the result is written; warm run: cache hit → zero network with the same verdict', async () => {
     const tarBytes = await tarForPlatforms(['linux-x64/node.napi'])
     const fetcher = countingFetch(tarBytes)
     const { cache } = memCache(10_000)
 
-    // 第一次（冷）：缓存空 → 必须真实取证 → 2 次网络，结果落盘
+    // first (cold): the cache is empty, so verification must really happen → 2 calls, then written
     const cold = await buildFindings([bCand()], env, {
       deep: true,
       fetchImpl: fetcher.fetch,
@@ -657,11 +657,11 @@ describe('buildFindings · deep 磁盘缓存', () => {
     })
     expect(cold.networkCalls).toBe(2)
     expect(cold.findings[0]?.risk).toBe(RiskLevel.LOW)
-    // 磁盘已被写入（再次 load 能读到同 key）
+    // the disk has been written (loading again finds the same key)
     const reloaded = await loadVerifyCache(cache.path, cache.fs)
     expect(reloaded.size).toBe(1)
 
-    // 第二次（温）：同 key 命中缓存 → 不再发网络 → 0 次，结论依旧 LOW
+    // second (warm): the same key hits → no network → 0 calls, and the verdict is still LOW
     const warm = await buildFindings([bCand()], env, {
       deep: true,
       fetchImpl: fetcher.fetch,
@@ -672,7 +672,7 @@ describe('buildFindings · deep 磁盘缓存', () => {
     expect(warm.findings[0]?.artifacts.some((a) => a.platform === 'linux')).toBe(true)
   })
 
-  it('未传 cache（null/缺省）→ 不落盘、每次现场取证', async () => {
+  it('no cache passed (null / omitted) → nothing written, verification runs every time', async () => {
     const tarBytes = await tarForPlatforms(['linux-x64/node.napi'])
     const fetcher = countingFetch(tarBytes)
     const one = await buildFindings([bCand()], env, {
@@ -684,23 +684,23 @@ describe('buildFindings · deep 磁盘缓存', () => {
       deep: true,
       fetchImpl: fetcher.fetch,
     })
-    expect(two.networkCalls).toBe(2) // 无缓存 → 每次都取证
+    expect(two.networkCalls).toBe(2) // no cache → verification every time
   })
 
-  it('缓存过期（超过 TTL）→ 视为未命中，重新取证', async () => {
+  it('an expired cache (past the TTL) → treated as a miss and verified again', async () => {
     const tarBytes = await tarForPlatforms(['linux-x64/node.napi'])
     const fetcher = countingFetch(tarBytes)
     const c = memCache(10_000)
 
-    // 冷跑写入（fetchedAt = 10_000）
+    // the cold run wrote it (fetchedAt = 10_000)
     await buildFindings([bCand()], env, { deep: true, fetchImpl: fetcher.fetch, cache: c.cache })
-    // 拨快时钟越过 TTL → 命中失败，必须重新发网络
+    // move the clock past the TTL → the lookup must miss and go back to the network
     c.clock.now = 10_000 + DEFAULT_TTL_MS + 1
     const after = await buildFindings([bCand()], env, {
       deep: true,
       fetchImpl: fetcher.fetch,
       cache: c.cache,
     })
-    expect(after.networkCalls).toBe(2) // TTL 过期 → 重新取证
+    expect(after.networkCalls).toBe(2) // TTL expired → verified again
   })
 })

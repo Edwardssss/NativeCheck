@@ -28,7 +28,7 @@ const env: Environment = {
 const bunRoot = join(fileURLToPath(new URL('.', import.meta.url)), '..', 'testdata', 'bun-lockb')
 
 describe('parseBunLockfile', () => {
-  it('真实 bun.lockb → 解析出包 + optional 平台簇（Pattern A 信号）', () => {
+  it('real bun.lockb → parses packages + an optional platform cluster (Pattern A signal)', () => {
     const buf = readFileSync(join(bunRoot, 'bun.lockb'))
     const list = parseBunLockfile(buf)
     const byName = new Map(list.map((p) => [p.name, p]))
@@ -36,7 +36,7 @@ describe('parseBunLockfile', () => {
     expect(list.length).toBeGreaterThan(30)
     const esbuild = byName.get('esbuild')
     expect(esbuild).toBeDefined()
-    // bun.lockb 经 yarn-v1 转换保留 optionalDependencies → esbuild 平台簇。
+    // The yarn-v1 conversion of bun.lockb keeps optionalDependencies → esbuild platform cluster.
     const optCount = Object.values(esbuild?.dependencies ?? {}).filter((d) => d.optional).length
     expect(optCount).toBeGreaterThanOrEqual(20)
 
@@ -44,12 +44,12 @@ describe('parseBunLockfile', () => {
     expect(bs?.dependencies?.['prebuild-install']).toEqual({ name: 'prebuild-install' })
   })
 
-  it('畸形输入（非 bun.lockb 缓冲）→ 抛错（由 ingest 转 Fail Closed）', () => {
+  it('malformed input (a non-bun.lockb buffer) → throws (ingest turns that into Fail Closed)', () => {
     expect(() => parseBunLockfile(Buffer.from('not a lockb', 'utf8'))).toThrow()
   })
 })
 
-describe('bun 集成 · scan 真实 bun.lockb（零网络）', () => {
+describe('bun integration · scan of a real bun.lockb (zero network)', () => {
   it('esbuild → Pattern A，better-sqlite3 → Pattern C', async () => {
     const { report, unsupported } = await scan(bunRoot, { mode: 'fast', env })
     expect(unsupported).toBeUndefined()

@@ -1,31 +1,32 @@
 # Contributing
 
-## 开发前
+## Before you start
 
 ```bash
 npm install
 npm run typecheck && npm test
 ```
 
-需要 Node **>= 20.17**（`@npmcli/arborist@9` 的约束）。
+Node **>= 20.17** is required (`@npmcli/arborist@9`).
 
-## 分支与提交
+## Branches and commits
 
-- 分支命名：`feat/...`、`fix/...`、`chore/...`、`docs/...`
-- 提交信息用 [Conventional Commits](https://www.conventionalcommits.org/)：`feat: add pattern-a reverse lookup`
+- Branch names: `feat/...`, `fix/...`, `chore/...`, `docs/...`
+- Use [Conventional Commits](https://www.conventionalcommits.org/):
+  `feat: add pattern-a reverse lookup`
 
-## Fixture 约定
+## Fixture conventions
 
 ```yaml
 # fixtures/pattern-a-platform-optional-deps/sharp-style/expected.yaml
 pattern: PlatformOptionalDeps
 strategy: PREBUILT
 risk: LOW
-native: true # 关键：纯 JS 检测器会漏报这个
-network_calls: 0 # 关键：断言零网络，防止回归
+native: true # key: a pure-JS detector misses this one
+network_calls: 0 # key: asserts zero network, which stops regressions
 ```
 
-目录按分发模式组织：
+Samples are organized by distribution pattern:
 
 ```text
 fixtures/
@@ -33,25 +34,33 @@ fixtures/
 ├── pattern-b-prebuildify/
 ├── pattern-c-remote-download/
 ├── pattern-d-source-only/
-├── non-native/          # 防误报对照组
-└── unsupported/         # lockfile v1 / pnpm-lock.yaml
+├── non-native/          # false-positive controls
+└── unsupported/         # lockfile v1 / malformed pnpm / yarn / bun
 ```
 
-## 评测
+Any change to a detection rule needs a fixture. `network_calls: 0` is a hard
+assertion: it is what keeps the default path offline.
 
-准确率分三层统计：
+## Measurement
 
-| 层  | 判定内容             | 指标              |
-| --- | -------------------- | ----------------- |
-| L1  | 是不是 native 包     | 漏报率（权重 ×2） |
-| L2  | 走预编译还是源码构建 | FP / FN 率        |
-| L3  | 缺失哪些工具链       | 阻塞项召回率      |
+Accuracy is tracked in three layers:
 
-Ground truth 靠编译器 wrapper采集：把 `cc` / `gcc` / `clang` 等替换成记录器，任何一次调用都证明发生了本地编译。C/C++ 要变成 `.node`，物理上必须经过编译器——准确率 100%。
+| Layer | Question                                  | Metric                       |
+| ----- | ----------------------------------------- | ---------------------------- |
+| L1    | Is this package native?                   | miss rate (weighted ×2)      |
+| L2    | Prebuilt binary or local source build?    | FP / FN rate                 |
+| L3    | Which toolchain pieces are missing?       | blocker recall               |
 
-## 代码风格
+Ground truth comes from compiler wrappers: `cc` / `gcc` / `g++` / `clang` are
+replaced by recorders, and any call proves a local compile happened. A C/C++
+addon cannot become a `.node` without going through a compiler, which makes this
+more reliable than scraping build logs. See
+[`testdata/ground-truth/README.md`](./testdata/ground-truth/README.md).
 
-- TypeScript `strict` 全开，`noUncheckedIndexedAccess` 也在
-- 类型导入统一用 `import type`（ESLint 强制）
-- 格式化交给 Prettier，`npm run format` 后再提交
-- 生态相关的逻辑只许出现在 `src/adapters/<ecosystem>/`，`src/core/` 必须保持生态无关
+## Code style
+
+- TypeScript with `strict` and `noUncheckedIndexedAccess` enabled
+- Type-only imports must use `import type` (ESLint enforces this)
+- Prettier owns formatting: run `npm run format` before committing
+- Ecosystem-specific logic belongs in `src/adapters/<ecosystem>/`; `src/core/`
+  stays ecosystem-independent

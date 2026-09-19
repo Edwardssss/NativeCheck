@@ -1,8 +1,8 @@
 /**
- * target.ts — `--target` 单包诊断模式。
+ * target.ts — `--target` single-package diagnosis.
  *
- * 全程注入 mock fetch，不碰真实网络。核心验证：spec 解析、fast 模式各分发形态
- * 的 L1 classify（一次 manifest GET）、deep 模式 B/C 的 L2 取证折叠（网络计数）。
+ * fetch is mocked throughout, so no real network is touched. The point is to verify spec
+ * parsing, the L1 classification of each pattern in fast mode (one manifest GET), and the
  */
 import { describe, expect, it } from 'vitest'
 import { parsePackageSpec, scanTarget } from '../src/adapters/node/target'
@@ -26,7 +26,7 @@ const env: Environment = {
   sdks: [],
 }
 
-/** 便捷构造一个 HttpLike 响应。 */
+/** Build an HttpLike response. */
 function body(
   status: number,
   text?: string,
@@ -42,7 +42,7 @@ function body(
   return Promise.resolve({ status, ok: status >= 200 && status < 300, body: stream })
 }
 
-/** 带请求计数器的 mock fetch：按 url 分发 registry manifest / HEAD。 */
+/** A mock fetch that counts requests and dispatches registry manifests vs HEADs by URL. */
 function countingFetch(manifest: Record<string, unknown>): {
   fetch: HttpLike
   count: () => number
@@ -51,7 +51,7 @@ function countingFetch(manifest: Record<string, unknown>): {
   const fetch: HttpLike = async (url: string, init?: { method?: string }) => {
     n++
     if (url.includes('registry.npmjs.org')) return body(200, JSON.stringify(manifest))
-    // 非 registry = 远端产物 HEAD
+    // anything that is not the registry is a remote artifact HEAD
     expect(init?.method).toBe('HEAD')
     return { status: 200, ok: true, body: null }
   }
@@ -59,31 +59,31 @@ function countingFetch(manifest: Record<string, unknown>): {
 }
 
 describe('parsePackageSpec', () => {
-  it('裸包名', () => {
+  it('a bare package name', () => {
     expect(parsePackageSpec('lodash')).toEqual({ name: 'lodash' })
   })
   it('name@version', () => {
     expect(parsePackageSpec('lodash@4.17.21')).toEqual({ name: 'lodash', version: '4.17.21' })
   })
-  it('scoped 无版本', () => {
+  it('scoped without a version', () => {
     expect(parsePackageSpec('@scope/name')).toEqual({ name: '@scope/name' })
   })
-  it('scoped 带版本', () => {
+  it('scoped with a version', () => {
     expect(parsePackageSpec('@scope/name@1.2.3')).toEqual({
       name: '@scope/name',
       version: '1.2.3',
     })
   })
-  it('scoped 空版本回落为裸名', () => {
+  it('a scoped empty version falls back to the bare name', () => {
     expect(parsePackageSpec('@scope/name@')).toEqual({ name: '@scope/name' })
   })
-  it('空串抛错', () => {
+  it('an empty string throws', () => {
     expect(() => parsePackageSpec('   ')).toThrow()
   })
 })
 
-describe('scanTarget · fast（仅一次 manifest GET，各分发形态 L1 classify）', () => {
-  it('纯 JS（lodash）→ NotNative / LOW，networkCalls=1', async () => {
+describe('scanTarget · fast (one manifest GET, L1 classify per pattern)', () => {
+  it('pure JS (lodash) → NotNative / LOW, networkCalls=1', async () => {
     const { fetch, count } = countingFetch({
       name: 'lodash',
       version: '4.17.21',
@@ -97,7 +97,7 @@ describe('scanTarget · fast（仅一次 manifest GET，各分发形态 L1 class
     expect(report.target).toBe('lodash@4.17.21')
   })
 
-  it('B（better-sqlite3，node-addon-api 无 install 脚本）→ Prebuildify / UNVERIFIED（fast 不取证）', async () => {
+  it('B (better-sqlite3, node-addon-api without an install script) → Prebuildify / UNVERIFIED (fast does not verify)', async () => {
     const { fetch, count } = countingFetch({
       name: 'better-sqlite3',
       version: '13.0.3',
@@ -108,7 +108,7 @@ describe('scanTarget · fast（仅一次 manifest GET，各分发形态 L1 class
     expect(count()).toBe(1)
     expect(report.findings[0]?.pattern).toBe(DistributionPattern.Prebuildify)
     expect(report.findings[0]?.risk).toBe(RiskLevel.UNVERIFIED)
-    // 缺 version → 解析 latest，report.target 用 manifest 实际版本
+    // no version → resolve latest, and report.target uses the resolved version
     expect(report.target).toBe('better-sqlite3@13.0.3')
   })
 
@@ -125,7 +125,7 @@ describe('scanTarget · fast（仅一次 manifest GET，各分发形态 L1 class
     expect(report.findings[0]?.risk).toBe(RiskLevel.UNVERIFIED)
   })
 
-  it('D（node-pty，nan）→ SourceOnly / MEDIUM（工具链齐全）', async () => {
+  it('D (node-pty, nan) → SourceOnly / MEDIUM (toolchain complete)', async () => {
     const { fetch, count } = countingFetch({
       name: 'node-pty',
       version: '1.1.0',
@@ -139,7 +139,7 @@ describe('scanTarget · fast（仅一次 manifest GET，各分发形态 L1 class
     expect(report.findings[0]?.risk).toBe(RiskLevel.MEDIUM)
   })
 
-  it('A（esbuild，平台可选依赖簇）→ PlatformOptionalDeps / LOW', async () => {
+  it('A (esbuild, platform optional dependency cluster) → PlatformOptionalDeps / LOW', async () => {
     const optional: Record<string, string> = {
       '@esbuild/linux-x64': '0.27.0',
       '@esbuild/linux-arm64': '0.27.0',
@@ -160,7 +160,7 @@ describe('scanTarget · fast（仅一次 manifest GET，各分发形态 L1 class
   })
 })
 
-describe('scanTarget · deep（L2 取证折叠，网络计数累计）', () => {
+describe('scanTarget · deep (L2 verification folding, network calls accumulate)', () => {
   const canvasManifest = {
     name: 'canvas',
     version: '3.2.0',
@@ -172,7 +172,7 @@ describe('scanTarget · deep（L2 取证折叠，网络计数累计）', () => {
     scripts: { install: 'prebuild-install -r napi || node-gyp rebuild' },
   }
 
-  it('C 模式 deep：manifest GET(1) + verify manifest(1) + HEAD(1) → LOW，networkCalls=3', async () => {
+  it('pattern C deep: manifest GET(1) + verify manifest(1) + HEAD(1) → LOW, networkCalls=3', async () => {
     const { fetch, count } = countingFetch(canvasManifest)
     const report = await scanTarget('canvas', { env, fetchImpl: fetch, deep: true })
     expect(count()).toBe(3)
@@ -180,7 +180,7 @@ describe('scanTarget · deep（L2 取证折叠，网络计数累计）', () => {
     expect(report.findings[0]?.strategy).toBe(InstallStrategy.Prebuilt)
   })
 
-  it('A 模式 deep 不额外取证（A 无需联网），networkCalls=1', async () => {
+  it('pattern A deep does not verify anything (A needs no network), networkCalls=1', async () => {
     const optional: Record<string, string> = {
       '@esbuild/linux-x64': '0.27.0',
       '@esbuild/linux-arm64': '0.27.0',
@@ -199,7 +199,7 @@ describe('scanTarget · deep（L2 取证折叠，网络计数累计）', () => {
     expect(report.findings[0]?.risk).toBe(RiskLevel.LOW)
   })
 
-  it('manifest 拉取异常 → 向上抛（CLI 兜底）', async () => {
+  it('a failing manifest fetch propagates (the CLI catches it)', async () => {
     const fetchImpl: HttpLike = async () => {
       throw new Error('ETIMEDOUT')
     }

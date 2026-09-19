@@ -37,12 +37,12 @@ function envWith(systemLibs: Environment['systemLibs']): Environment {
 }
 
 describe('probeSystemLibs', () => {
-  it('非 Linux 平台 → 不探测，available=false', () => {
+  it('non-Linux platform → no probing, available=false', () => {
     expect(probeSystemLibs('win32')).toEqual({ available: false, present: [] })
     expect(probeSystemLibs('darwin')).toEqual({ available: false, present: [] })
   })
 
-  it('SYSTEM_LIBS 元数据自洽（pkgConfig 唯一）', () => {
+  it('SYSTEM_LIBS metadata is self-consistent (pkgConfig is unique)', () => {
     const keys = SYSTEM_LIBS.map((l) => l.pkgConfig)
     expect(new Set(keys).size).toBe(keys.length)
     for (const lib of SYSTEM_LIBS) {
@@ -54,20 +54,20 @@ describe('probeSystemLibs', () => {
 })
 
 describe('systemLibHint', () => {
-  it('命中映射 → 返回库元数据', () => {
+  it('mapping hit → returns the library metadata', () => {
     expect(systemLibHint('pcap')?.pkgConfig).toBe('libpcap')
     expect(systemLibHint('cap')?.pkgConfig).toBe('libpcap')
     expect(systemLibHint('libpq')?.pkgConfig).toBe('libpq')
     expect(systemLibHint('speaker')?.pkgConfig).toBe('alsa')
   })
 
-  it('未命中 → undefined', () => {
+  it('no hit → undefined', () => {
     expect(systemLibHint('no-such-package')).toBeUndefined()
     expect(systemLibHint('lodash')).toBeUndefined()
   })
 })
 
-describe('matchCandidate 系统库 advisory', () => {
+describe('matchCandidate system-library advisory', () => {
   const srcBuild = (name: string) =>
     matchCandidate({
       candidate: {
@@ -78,7 +78,7 @@ describe('matchCandidate 系统库 advisory', () => {
       env: envWith({ available: true, present: [] }),
     })
 
-  it('SourceBuild + 映射命中 + 未检测到 → 附加 systemLibs 提示，risk 不变', () => {
+  it('SourceBuild + mapping hit + not detected → adds systemLibs advisory, risk unchanged', () => {
     const finding = srcBuild('pcap')
     expect(finding.strategy).toBe(InstallStrategy.SourceBuild)
     expect(finding.systemLibs).toBeDefined()
@@ -88,7 +88,7 @@ describe('matchCandidate 系统库 advisory', () => {
     expect(finding.blockers).toHaveLength(0)
   })
 
-  it('库已检测到 → 无提示', () => {
+  it('library already detected → no advisory', () => {
     const finding = matchCandidate({
       candidate: {
         pkg: pkg({ name: 'pcap', version: '1.0.0', dependencies: { nan: { name: 'nan' } } }),
@@ -100,7 +100,7 @@ describe('matchCandidate 系统库 advisory', () => {
     expect(finding.systemLibs).toBeUndefined()
   })
 
-  it('env 无 systemLibs（旧测试/非 Linux）→ 无提示、不破坏行为', () => {
+  it('env without systemLibs (old tests / non-Linux) → no advisory, behaviour intact', () => {
     const finding = matchCandidate({
       candidate: {
         pkg: pkg({ name: 'pcap', version: '1.0.0', dependencies: { nan: { name: 'nan' } } }),
@@ -113,7 +113,7 @@ describe('matchCandidate 系统库 advisory', () => {
     expect(finding.strategy).toBe(InstallStrategy.SourceBuild)
   })
 
-  it('prebuilt 策略（A 模式）即使名字命中也不附加 systemLibs（不编译）', () => {
+  it('prebuilt strategy (pattern A) never adds systemLibs, even on a name hit (no compile)', () => {
     const esbuild = pkg({
       name: 'pcap',
       version: '1.0.0',

@@ -9,7 +9,7 @@
  * must never let UNVERIFIED be guessed into HIGH (match still reports Replay).
  *
  * The three implementation deviations from design doc §14.2 (key / TTL /
- * location) are recorded in `temp/NativeCheck_项目实施方案.md` §28.
+ * location) are recorded in §28.
  */
 import { mkdir, readFile, writeFile } from 'node:fs/promises'
 import { dirname, join } from 'node:path'

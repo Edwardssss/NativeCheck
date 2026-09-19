@@ -16,23 +16,23 @@ describe('allowScriptsPolicy', () => {
     expect(allowScriptsPolicy('9.8.1')).toBe('scripts-run')
   })
 
-  it('npm 11.16.0+ → advisory（告警，脚本仍执行）', () => {
+  it('npm 11.16.0+ → advisory (warns, scripts still run)', () => {
     expect(allowScriptsPolicy('11.16.0')).toBe('advisory')
     expect(allowScriptsPolicy('11.20.1')).toBe('advisory')
   })
 
-  it('npm 12+ → blocked（allowScripts 默认关闭）', () => {
+  it('npm 12+ → blocked (allowScripts is off by default)', () => {
     expect(allowScriptsPolicy('12.0.0')).toBe('blocked')
     expect(allowScriptsPolicy('12.3.1')).toBe('blocked')
   })
 
-  it('未知 / 缺失版本 → scripts-run（保守，不制造噪音）', () => {
+  it('unknown / missing version → scripts-run (conservative, no noise)', () => {
     expect(allowScriptsPolicy(undefined)).toBe('scripts-run')
     expect(allowScriptsPolicy('')).toBe('scripts-run')
     expect(allowScriptsPolicy('garbage')).toBe('scripts-run')
   })
 
-  it('容忍前导 v', () => {
+  it('tolerates a leading v', () => {
     expect(allowScriptsPolicy('v12.0.0')).toBe('blocked')
   })
 })

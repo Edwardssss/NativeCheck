@@ -12,7 +12,7 @@
  * `networkCalls === 0`.
  *
  * Coverage today: 31 packages across A/B/C/D/NotNative/BuildTool categories.
- * Meets the H1 target of >= 30 (see `temp/NativeCheck_改进方法评估.md` H1).
+ * Meets the H1 target of >= 30 (see `temp/NativeCheck_improvement-method-assessment.md` H1).
  */
 import { describe, expect, it } from 'vitest'
 import { readdirSync, readFileSync } from 'node:fs'
@@ -105,9 +105,9 @@ function parseExpected(text: string): Expected {
 
 const cases = collectCases(heldOutRoot)
 
-describe('held-out-runner（泛化性回归，零网络）', () => {
+describe('held-out-runner (generalization regression, zero network)', () => {
   // Sanity: at least one fixture must exist, else this whole suite is silent.
-  it('收集到非空 held-out 样本（防空跑）', () => {
+  it('collects a non-empty held-out sample set (guards against an empty run)', () => {
     expect(cases.length).toBeGreaterThanOrEqual(30)
   })
 

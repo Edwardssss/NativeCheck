@@ -84,8 +84,8 @@ const nested: Record<string, LockPackage> = {
   'node_modules/nan': { version: '2.18.0' },
 }
 
-describe('ingest · 真实依赖链（pathChains）', () => {
-  it('记录从项目根到目标的完整链路，而不是只重复包名', async () => {
+describe('ingest · real dependency chains (pathChains)', () => {
+  it('records the full chain from project root to target, not just the package name again', async () => {
     await withProject(nested, { framework: '2.0.0', database: '2.0.0' }, async (root) => {
       const outcome = await ingest(root)
       if (!outcome.ok) throw new Error(outcome.reason)
@@ -96,11 +96,11 @@ describe('ingest · 真实依赖链（pathChains）', () => {
     })
   })
 
-  it('同一包从多条路径可达时保留多条链（上限内）', async () => {
+  it('keeps several chains when a package is reachable via several paths (within the cap)', async () => {
     await withProject(nested, { framework: '2.0.0', framework2: '3.0.0' }, async (root) => {
       const outcome = await ingest(root)
       if (!outcome.ok) throw new Error(outcome.reason)
-      // helper 可经 framework 或 framework2 到达 → 两条链都保留
+      // helper is reachable via framework or framework2 → both chains are kept
       const head = rootName(outcome.graph.packages)
       expect(outcome.graph.packages['helper@1.0.0']?.pathChains).toEqual([
         [head, 'framework', 'helper'],
@@ -109,7 +109,7 @@ describe('ingest · 真实依赖链（pathChains）', () => {
     })
   })
 
-  it('环状依赖不会卡死，链上不重复出现同一包', async () => {
+  it('cyclic dependencies do not hang and no package repeats within a chain', async () => {
     const cyclic: Record<string, LockPackage> = {
       'node_modules/a': { version: '1.0.0', dependencies: { b: '1.0.0' } },
       'node_modules/b': { version: '1.0.0', dependencies: { a: '1.0.0' } },
@@ -124,14 +124,14 @@ describe('ingest · 真实依赖链（pathChains）', () => {
   })
 })
 
-describe('scan · 报告的 Dependency path 段', () => {
-  it('finding 的 paths 带上完整链与 dev 标记', async () => {
+describe('scan · the Dependency path section of the report', () => {
+  it('paths on a finding carry the full chain plus the dev flag', async () => {
     await withProject(nested, { database: '2.0.0' }, async (root) => {
       const { report } = await scan(root, { mode: 'fast', env })
       const addon = report.findings.find((f) => f.pkg.name === 'native-addon')
       const chain = addon?.paths[0]?.chain ?? []
       expect(chain.slice(-2)).toEqual(['database', 'native-addon'])
-      expect(chain).toHaveLength(3) // 根 → database → native-addon
+      expect(chain).toHaveLength(3) // root → database → native-addon
       expect(addon?.paths[0]?.dev).toBe(false)
     })
   })

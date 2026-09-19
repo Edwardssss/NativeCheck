@@ -41,8 +41,8 @@ function withProject(
   })()
 }
 
-describe('robustness · 畸形 lockfile（不 panic，Fail Closed）', () => {
-  it('无 lockfile → unsupported，不抛异常', async () => {
+describe('robustness · malformed lockfiles (no panic, Fail Closed)', () => {
+  it('no lockfile → unsupported, nothing thrown', async () => {
     await withProject({ 'package.json': '{}' }, async (root) => {
       const { report, unsupported } = await scan(root, { mode: 'fast', env })
       expect(unsupported).toBeDefined()
@@ -50,7 +50,7 @@ describe('robustness · 畸形 lockfile（不 panic，Fail Closed）', () => {
     })
   })
 
-  it('lockfile JSON 语法错误 → unsupported，不抛异常', async () => {
+  it('lockfile with a JSON syntax error → unsupported, nothing thrown', async () => {
     await withProject({ 'package-lock.json': '{ this is not valid json' }, async (root) => {
       const { report, unsupported } = await scan(root, { mode: 'fast', env })
       expect(unsupported).toBeDefined()
@@ -58,19 +58,19 @@ describe('robustness · 畸形 lockfile（不 panic，Fail Closed）', () => {
     })
   })
 
-  it('lockfileVersion 缺失但 packages 空 → unsupported 或空报告，不抛异常', async () => {
+  it('lockfileVersion missing, packages empty → unsupported or empty report, nothing thrown', async () => {
     await withProject(
       { 'package-lock.json': JSON.stringify({ name: 'x', version: '1.0.0', packages: {} }) },
       async (root) => {
         const { report, unsupported } = await scan(root, { mode: 'fast', env })
-        // 要么显式 unsupported，要么正常跑出空 findings——绝不 panic。
+        // Either explicitly unsupported or a normal run with empty findings — never a panic.
         if (unsupported) expect(report.findings).toEqual([])
         else expect(report.summary.nativeCandidates).toBeGreaterThanOrEqual(0)
       },
     )
   })
 
-  it('packages 是数组（非对象）→ 不抛异常', async () => {
+  it('packages is an array (not an object) → nothing thrown', async () => {
     await withProject(
       {
         'package-lock.json': JSON.stringify({
@@ -88,7 +88,7 @@ describe('robustness · 畸形 lockfile（不 panic，Fail Closed）', () => {
     )
   })
 
-  it('lockfile 有 lockfileVersion=3 但 packages 里含循环依赖 → 不抛异常、不无限循环', async () => {
+  it('lockfileVersion=3 with a dependency cycle in packages → no throw, no infinite loop', async () => {
     const lock = {
       name: 'x',
       version: '1.0.0',
@@ -112,7 +112,7 @@ describe('robustness · 畸形 lockfile（不 panic，Fail Closed）', () => {
     })
   })
 
-  it('dependencies 字段是字符串（畸形）→ 不抛异常', async () => {
+  it('dependencies is a string (malformed) → nothing thrown', async () => {
     const lock = {
       name: 'x',
       version: '1.0.0',
@@ -130,13 +130,13 @@ describe('robustness · 畸形 lockfile（不 panic，Fail Closed）', () => {
   })
 })
 
-describe('robustness · 不支持的 lockfile 格式（Fail Closed）', () => {
-  it('文本 bun.lock（Bun 1.2+ 默认）→ 明确指向它，而不是「找不到 lockfile」', async () => {
+describe('robustness · unsupported lockfile formats (Fail Closed)', () => {
+  it('text bun.lock (Bun 1.2+ default) → points at it, not at "no lockfile found"', async () => {
     await withProject({ 'bun.lock': '{ "lockfileVersion": 0 }' }, async (root) => {
       const { report, unsupported } = await scan(root, { mode: 'fast', env })
       expect(unsupported?.detected).toBe('bun.lock (text)')
       expect(unsupported?.reason).toContain('bun.lockb')
-      // 支持列表来自 ingest 的真实能力，不是写死的 npm
+      // The supported list comes from what ingest really handles, not a hardcoded npm
       const supported = report.unsupported?.supported.join(' ') ?? ''
       expect(supported).toContain('bun.lockb')
       expect(supported).toContain('pnpm')

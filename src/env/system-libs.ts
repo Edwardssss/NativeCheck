@@ -55,7 +55,7 @@ export const SYSTEM_LIBS: readonly SystemLibEntry[] = [
  * Probe the curated system libraries.
  *
  * Linux-only for now: macOS brew-managed `.pc` files live off `pkg-config`'s
- * default search path, out of the Linux-first scope (see README 支持范围).
+ * default search path, out of the Linux-first scope (see README, supported scope).
  * A single subprocess call, zero network, never throws.
  */
 export function probeSystemLibs(platform: Platform = detectPlatform()): SystemLibProbe {

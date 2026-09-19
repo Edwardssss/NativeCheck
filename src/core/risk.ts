@@ -1,7 +1,7 @@
 /**
  * Risk classification.
  *
- * Maps to design doc `temp/NativeCheck_项目实施方案.md` §9.5, §11.4
+ * Maps to design doc §9.5, §11.4
  *
  * Key constraint: **UNVERIFIED and AMBIGUOUS are never rendered in red**, and
  * they must always carry a hint on how to become conclusive. When the

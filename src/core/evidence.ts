@@ -1,7 +1,7 @@
 /**
  * Evidence and reliability annotation.
  *
- * Maps to design doc `temp/NativeCheck_项目实施方案.md` §4.5, §9.2, §9.3, §11, §19.4
+ * Maps to design doc §4.5, §9.2, §9.3, §11, §19.4
  *
  * Core claim: **output should not carry a single confidence percentage, but
  * describe how each conclusion was derived.** "87% confidence" is false

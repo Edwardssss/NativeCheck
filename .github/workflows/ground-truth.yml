@@ -62,9 +62,9 @@ jobs:
           echo "$out"
           # Extract the FN rate; anything above 5% fails (FN is the most severe
           # error class, weighted ×2 per design doc §13.3)
-          rate=$(echo "$out" | sed -n 's/.*L2 FN漏报率=\([0-9.]*\)%.*/\1/p' | head -1)
+          rate=$(echo "$out" | sed -n 's/.*L2 FN miss rate=\([0-9.]*\)%.*/\1/p' | head -1)
           if [ -n "$rate" ] && awk "BEGIN{exit !($rate > 5)}"; then
-            echo "::error::L2 FN 漏报率 ${rate}% 超过 5% 阈值"
+            echo "::error::L2 FN miss rate ${rate}% exceeds the 5% threshold"
             exit 1
           fi
           echo "FN gate passed (${rate:-n/a}%)"

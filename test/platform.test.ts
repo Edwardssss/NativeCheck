@@ -61,37 +61,37 @@ function clusterParent(
   })
 }
 
-describe('matchesPlatform · 复刻 npm 的 os / cpu / libc 闸门', () => {
-  it('无约束 → 恒匹配', () => {
+describe('matchesPlatform · replicates the npm os / cpu / libc gate', () => {
+  it('no constraints → always matches', () => {
     expect(matchesPlatform({}, linuxEnv)).toBe(true)
     expect(matchesPlatform({ os: [], cpu: [] }, winEnv)).toBe(true)
   })
 
-  it('正向列表是白名单', () => {
+  it('a positive list is a whitelist', () => {
     expect(matchesPlatform({ os: ['darwin'] }, linuxEnv)).toBe(false)
     expect(matchesPlatform({ os: ['linux', 'darwin'] }, linuxEnv)).toBe(true)
     expect(matchesPlatform({ cpu: ['arm64'] }, linuxEnv)).toBe(false)
     expect(matchesPlatform({ cpu: ['x64', 'arm64'] }, linuxEnv)).toBe(true)
   })
 
-  it('`!` 表示排除，且否定优先', () => {
+  it('`!` means exclude, and negation wins', () => {
     expect(matchesPlatform({ os: ['!win32'] }, linuxEnv)).toBe(true)
     expect(matchesPlatform({ os: ['!win32'] }, winEnv)).toBe(false)
-    // 白名单命中但被否定项排除 → 仍然不匹配
+    // Listed by the whitelist but excluded by a negation → still no match
     expect(matchesPlatform({ os: ['!linux', 'darwin'] }, linuxEnv)).toBe(false)
   })
 
-  it('libc 只在 linux 上是判定维度', () => {
+  it('libc is only a decision dimension on linux', () => {
     expect(matchesPlatform({ libc: ['musl'] }, linuxEnv)).toBe(false)
     expect(matchesPlatform({ libc: ['glibc'] }, linuxEnv)).toBe(true)
-    // win32 上 npm 不检查 libc
+    // npm does not check libc on win32
     expect(matchesPlatform({ libc: ['musl'] }, winEnv)).toBe(true)
-    // 宿主 libc 探测失败时不否认（也不假装匹配）
+    // A failed host libc probe denies nothing (and does not pretend to match)
     expect(matchesPlatform({ libc: ['musl'] }, { os: 'linux', arch: 'x64', sdks: [] })).toBe(true)
   })
 })
 
-describe('classifyGraph · 平台不适用的可选包被剔除，必需依赖保留', () => {
+describe('classifyGraph · inapplicable optional packages are dropped, required ones stay', () => {
   const graph = indexPackages([
     pkg({
       name: 'fsevents',
@@ -103,13 +103,13 @@ describe('classifyGraph · 平台不适用的可选包被剔除，必需依赖�
     pkg({ name: 'darwin-only-addon', version: '1.0.0', os: ['darwin'], hasInstallScript: true }),
   ])
 
-  it('optional-only + 平台不匹配 → 不进候选（npm 根本不装）', () => {
+  it('optional-only + platform mismatch → never a candidate (npm would not install it)', () => {
     const result = classifyGraph(graph, { env: winEnv })
     expect(result.platformExcluded).toEqual(['fsevents@2.3.3'])
     expect(result.candidates.map((c) => c.pkg.name)).toEqual(['darwin-only-addon'])
   })
 
-  it('缺省 env 时行为不变（纯图逻辑，向后兼容）', () => {
+  it('omitting env changes nothing (pure graph logic, backwards compatible)', () => {
     const result = classifyGraph(graph)
     expect(result.platformExcluded).toEqual([])
     expect(result.candidates.map((c) => c.pkg.name).sort()).toEqual([
@@ -118,7 +118,7 @@ describe('classifyGraph · 平台不适用的可选包被剔除，必需依赖�
     ])
   })
 
-  it('平台匹配时不影响候选（linux 上的 darwin 包只在 win32 被剔除）', () => {
+  it('a match leaves candidates alone (the darwin package is dropped only on win32)', () => {
     const linuxGraph = indexPackages([
       pkg({
         name: 'linux-only-addon',
@@ -134,8 +134,8 @@ describe('classifyGraph · 平台不适用的可选包被剔除，必需依赖�
     ])
   })
 
-  it('普通平台子包不计入 platformExcluded（它们本来就不是候选）', () => {
-    // 一个簇有 26 个平台子包，其中 25 个在本机不可用 —— 若全算进去，透明提示就成了噪声。
+  it('plain platform sub-packages never count as platformExcluded (they were no candidates)', () => {
+    // A cluster has 26 platform sub-packages, 25 unusable here — counting all 25 is just noise.
     const clusterGraph = indexPackages([
       pkg({ name: 'plain-sub', version: '1.0.0', optional: true, os: ['darwin'], cpu: ['arm64'] }),
     ])
@@ -143,8 +143,8 @@ describe('classifyGraph · 平台不适用的可选包被剔除，必需依赖�
   })
 })
 
-describe('matchCandidate · 必需依赖平台不匹配 = EBADPLATFORM 阻塞', () => {
-  it('否定结论而不是 LOW', () => {
+describe('matchCandidate · a required dep on a mismatched platform = EBADPLATFORM blocker', () => {
+  it('denies a conclusion instead of saying LOW', () => {
     const candidate = {
       pkg: pkg({
         name: 'linux-only-addon',
@@ -164,7 +164,7 @@ describe('matchCandidate · 必需依赖平台不匹配 = EBADPLATFORM 阻塞', 
     expect(finding.evidence[0]?.kind).toBe('platform-constraint')
   })
 
-  it('平台匹配时照常走原有判定', () => {
+  it('a platform match still follows the normal decision path', () => {
     const candidate = {
       pkg: pkg({
         name: 'linux-only-addon',
@@ -181,7 +181,7 @@ describe('matchCandidate · 必需依赖平台不匹配 = EBADPLATFORM 阻塞', 
   })
 })
 
-describe('matchCandidate · 模式 A 用子包平台约束替代猜测', () => {
+describe('matchCandidate · pattern A uses sub-package constraints instead of guessing', () => {
   const parent = clusterParent([
     { name: '@esbuild-like/darwin-arm64', os: ['darwin'], cpu: ['arm64'] },
     { name: '@esbuild-like/linux-x64', os: ['linux'], cpu: ['x64'], libc: ['glibc'] },
@@ -193,7 +193,7 @@ describe('matchCandidate · 模式 A 用子包平台约束替代猜测', () => {
     verdict: NativeVerdict.Yes,
   }
 
-  it('命中本平台子包 → LOW + Replay + 记录 artifact', () => {
+  it('hit on a sub-package for this platform → LOW + Replay + recorded artifact', () => {
     const finding = matchCandidate({ candidate, env: linuxEnv })
     expect(finding.risk).toBe(RiskLevel.LOW)
     expect(finding.reliability).toBe(Reliability.Replay)
@@ -203,7 +203,7 @@ describe('matchCandidate · 模式 A 用子包平台约束替代猜测', () => {
     )
   })
 
-  it('子包存在但都不匹配当前平台 → UNVERIFIED（不猜成 LOW，也不猜成 HIGH）', () => {
+  it('sub-packages exist but none matches → UNVERIFIED (no guessing LOW or HIGH)', () => {
     const finding = matchCandidate({
       candidate,
       env: { os: 'linux', arch: 's390x', libc: 'glibc', sdks: [] },
@@ -216,7 +216,7 @@ describe('matchCandidate · 模式 A 用子包平台约束替代猜测', () => {
     expect(hint?.description).toContain('darwin-arm64')
   })
 
-  it('子包没有平台信息 → 仍判 A，但可靠性降为未验证（不假装已确认）', () => {
+  it('sub-packages carry no platform info → still A, but reliability drops to unverified', () => {
     const finding = matchCandidate({
       candidate: {
         pkg: clusterParent([{ name: 'sub-a' }, { name: 'sub-b' }]),
@@ -230,7 +230,7 @@ describe('matchCandidate · 模式 A 用子包平台约束替代猜测', () => {
   })
 })
 
-describe('renderSummary · 被跳过的包必须可见', () => {
+describe('renderSummary · skipped packages must stay visible', () => {
   const base: ScanReport = {
     target: '/proj',
     generatedAt: '2026-09-19T00:00:00.000Z',
@@ -246,7 +246,7 @@ describe('renderSummary · 被跳过的包必须可见', () => {
     },
   }
 
-  it('静默丢包看起来就像漏报，所以摘要必须说明跳过了几个', () => {
+  it('silently dropping packages looks like a miss, so the summary must state the count', () => {
     expect(renderSummary(base)).not.toContain('platform not applicable')
     const withExcluded: ScanReport = {
       ...base,

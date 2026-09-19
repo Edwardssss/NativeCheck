@@ -33,7 +33,7 @@ const env: Environment = {
 }
 
 describe('matchCandidate', () => {
-  it('模式 A → LOW / PREBUILT，零 blocker', () => {
+  it('pattern A → LOW / PREBUILT, zero blockers', () => {
     const esbuild = pkg({
       name: 'esbuild',
       version: '0.27.7',
@@ -48,7 +48,7 @@ describe('matchCandidate', () => {
     expect(finding.strategy).toBe(InstallStrategy.Prebuilt)
   })
 
-  it('模式 D 工具链齐全 → MEDIUM / SOURCE_BUILD', () => {
+  it('pattern D with a full toolchain → MEDIUM / SOURCE_BUILD', () => {
     const legacy = pkg({
       name: 'node-sass',
       version: '9.0.0',
@@ -67,7 +67,7 @@ describe('matchCandidate', () => {
     expect(finding.blockers).toHaveLength(0)
   })
 
-  it('模式 D 缺编译器 → HIGH + blocker + remedy', () => {
+  it('pattern D without a compiler → HIGH + blocker + remedy', () => {
     const legacy = pkg({
       name: 'node-sass',
       version: '9.0.0',
@@ -86,7 +86,7 @@ describe('matchCandidate', () => {
     expect(finding.blockers.some((b) => b.name === 'C/C++ compiler')).toBe(true)
   })
 
-  it('SUSPICIOUS + 未定模式 → AMBIGUOUS（中性，非 LOW），带 resolveHint', () => {
+  it('SUSPICIOUS + undecided pattern → AMBIGUOUS (neutral, not LOW), with a resolveHint', () => {
     const mystery = pkg({ name: 'mystery', version: '1.0.0', hasInstallScript: true })
     const finding = matchCandidate({
       candidate: {
@@ -101,7 +101,7 @@ describe('matchCandidate', () => {
     expect(finding.blockers).toHaveLength(0)
   })
 
-  it('SUSPICIOUS + deep 解析为 select（良性脚本）→ 收敛 LOW / PREBUILT，verdict 仍 SUSPICIOUS', () => {
+  it('SUSPICIOUS + deep reads select (benign) → LOW / PREBUILT, verdict still SUSPICIOUS', () => {
     const coreJs = pkg({ name: 'core-js', version: '3.50.0', hasInstallScript: true })
     const finding = matchCandidate({
       candidate: {
@@ -122,12 +122,12 @@ describe('matchCandidate', () => {
     expect(finding.strategy).toBe(InstallStrategy.Prebuilt)
     expect(finding.verdict).toBe(NativeVerdict.Suspicious)
     expect(finding.resolveHint).toBeUndefined()
-    // select 重定向的语义映射是关键词表推断（表外行为是盲区）→ 只能标 Inferred，
-    // 不许声称 Replay（泛化性自审 2026-09-04 锁死，防止回退成过度声明）。
+    // The semantic mapping for a select redirect is keyword-table inference (off-table behaviour
+    // is a blind spot) → Inferred only. Replay would be an over-claim (locked 2026-09-04).
     expect(finding.reliability).toBe(Reliability.Inferred)
   })
 
-  it('SUSPICIOUS + deep 解析为 compile → 落 D，SOURCE_BUILD / MEDIUM', () => {
+  it('SUSPICIOUS + deep reads compile → lands on D, SOURCE_BUILD / MEDIUM', () => {
     const mystery = pkg({ name: 'mystery', version: '1.0.0', hasInstallScript: true })
     const finding = matchCandidate({
       candidate: {
@@ -142,11 +142,11 @@ describe('matchCandidate', () => {
     expect(finding.pattern).toBe(DistributionPattern.SourceOnly)
     expect(finding.strategy).toBe(InstallStrategy.SourceBuild)
     expect(finding.risk).toBe(RiskLevel.MEDIUM)
-    // compile 的语义映射是定义级的（脚本文本里明写 node-gyp rebuild）→ 保持 Replay。
+    // The compile mapping is definitional (the text literally says node-gyp rebuild) → Replay stays.
     expect(finding.reliability).toBe(Reliability.Replay)
   })
 
-  it('SUSPICIOUS + deep 解析为 download + 远端命中 → 落 C，LOW / PREBUILT', () => {
+  it('SUSPICIOUS + deep reads download and the remote hits → lands on C, LOW / PREBUILT', () => {
     const mystery = pkg({ name: 'mystery', version: '1.0.0', hasInstallScript: true })
     const finding = matchCandidate({
       candidate: {
@@ -166,7 +166,7 @@ describe('matchCandidate', () => {
     expect(finding.strategy).toBe(InstallStrategy.Prebuilt)
   })
 
-  it('SUSPICIOUS + deep 语义仍 unknown → 保持 AMBIGUOUS', () => {
+  it('SUSPICIOUS + deep semantics still unknown → stays AMBIGUOUS', () => {
     const mystery = pkg({ name: 'mystery', version: '1.0.0', hasInstallScript: true })
     const finding = matchCandidate({
       candidate: {
@@ -183,8 +183,8 @@ describe('matchCandidate', () => {
     expect(finding.risk).toBe(RiskLevel.AMBIGUOUS)
   })
 
-  it('deep 取不到脚本内容时，证据文案不留空括号、不带未验证标记', () => {
-    // 触发条件：lockfile 说 hasInstallScript，registry manifest 却没有任何 hook 内容。
+  it('no script content readable → evidence text has no empty parens and no unverified mark', () => {
+    // Trigger: the lockfile says hasInstallScript but the registry manifest has no hook content.
     const ghost = pkg({ name: 'ghost-script', version: '1.0.0', hasInstallScript: true })
     const finding = matchCandidate({
       candidate: {
@@ -193,7 +193,7 @@ describe('matchCandidate', () => {
         verdict: NativeVerdict.Suspicious,
       },
       env,
-      // 已取证（layer 2），但没有任何 hook 文本可读
+      // Forensics ran (layer 2), but no hook text was readable
       verify: { installScript: { script: '', intent: 'unknown' }, networkCalls: 1 },
     })
     expect(finding.risk).toBe(RiskLevel.AMBIGUOUS)
@@ -201,16 +201,16 @@ describe('matchCandidate', () => {
     expect(hint?.description).not.toContain('（）')
     expect(hint?.description).toContain('registry manifest')
     expect(hint?.layer).toBe(1)
-    // 结论的可靠性不能弱于自己的证据链
+    // The conclusion's reliability may not be weaker than its own evidence chain
     expect(finding.reliability).toBe(Reliability.Inferred)
   })
 })
 
-describe('matchCandidate · npm allowScripts 提示', () => {
-  // npm 12：allowScripts 默认关闭，install 脚本被阻止。
+describe('matchCandidate · npm allowScripts advisory', () => {
+  // npm 12: allowScripts is off by default, so install scripts are blocked.
   const npm12: Environment = { ...env, npmVersion: '12.0.0' }
 
-  it('模式 D（SourceOnly）+ npm 12 → 附加 blocked 提示', () => {
+  it('pattern D (SourceOnly) + npm 12 → adds the blocked advisory', () => {
     const legacy = pkg({
       name: 'node-sass',
       version: '9.0.0',
@@ -228,7 +228,7 @@ describe('matchCandidate · npm allowScripts 提示', () => {
     expect(finding.allowScripts?.remedy).toContain('node-sass')
   })
 
-  it('模式 C（RemoteDownload）+ npm 12 → 附加 blocked 提示', () => {
+  it('pattern C (RemoteDownload) + npm 12 → adds the blocked advisory', () => {
     const canvas = pkg({
       name: 'canvas',
       version: '3.2.0',
@@ -245,7 +245,7 @@ describe('matchCandidate · npm allowScripts 提示', () => {
     expect(finding.allowScripts?.policy).toBe('blocked')
   })
 
-  it('模式 B（Prebuildify，运行时 loader、无 install 脚本）+ npm 12 → 无提示', () => {
+  it('pattern B (Prebuildify, runtime loader, no install script) + npm 12 → no advisory', () => {
     const bcrypt = pkg({
       name: 'bcrypt',
       version: '6.0.0',
@@ -262,7 +262,7 @@ describe('matchCandidate · npm allowScripts 提示', () => {
     expect(finding.allowScripts).toBeUndefined()
   })
 
-  it('模式 B + binding.gyp（隐式 node-gyp rebuild）+ npm 12 → 附加 blocked 提示', () => {
+  it('pattern B + binding.gyp (implicit node-gyp rebuild) + npm 12 → blocked advisory', () => {
     const bs3 = pkg({
       name: 'better-sqlite3',
       version: '13.0.3',
@@ -284,7 +284,7 @@ describe('matchCandidate · npm allowScripts 提示', () => {
     expect(finding.allowScripts?.detail).toContain('binding.gyp')
   })
 
-  it('npm 10（scripts-run）→ 无提示', () => {
+  it('npm 10 (scripts-run) → no advisory', () => {
     const legacy = pkg({
       name: 'node-sass',
       version: '9.0.0',
@@ -302,7 +302,7 @@ describe('matchCandidate · npm allowScripts 提示', () => {
     expect(finding.allowScripts).toBeUndefined()
   })
 
-  it('SUSPICIOUS + deep 确认良性（select）+ npm 12 → 抑制提示', () => {
+  it('SUSPICIOUS + deep confirms benign (select) + npm 12 → advisory suppressed', () => {
     const coreJs = pkg({ name: 'core-js', version: '3.50.0', hasInstallScript: true })
     const finding = matchCandidate({
       candidate: {
@@ -323,8 +323,8 @@ describe('matchCandidate · npm allowScripts 提示', () => {
   })
 })
 
-describe('weakestReliability · Fail Closed 聚合', () => {
-  it('有未验证 → 整体未验证', () => {
+describe('weakestReliability · Fail Closed aggregation', () => {
+  it('one unverified member makes the whole aggregate unverified', () => {
     const r = weakestReliability([
       {
         kind: 'not-native',
@@ -348,8 +348,8 @@ describe('weakestReliability · Fail Closed 聚合', () => {
 })
 
 describe('summarize', () => {
-  it('SUSPICIOUS 不参与 native 统计（reported via byRisk only when finding）', () => {
-    // 这里只验证计数结构与 networkCalls 透传
+  it('SUSPICIOUS stays out of the native counts (reported via byRisk only when finding)', () => {
+    // This only checks the counting shape and the networkCalls passthrough
     const s = summarize([], 100, 0)
     expect(s.totalPackages).toBe(100)
     expect(s.networkCalls).toBe(0)

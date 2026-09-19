@@ -1,16 +1,17 @@
 #!/usr/bin/env bash
-# 只重跑 predict.sh（不重跑昂贵的 npm install 测量），用当前 dist/cli.js 覆盖各 cell 的
-# prediction.json。适用于「改了取证规则、ground-truth(compiled=yes|no) 未变」时的快速重测，
-# 比 run-matrix.sh 全套（含 npm install）快一个量级。
+# Re-run only predict.sh (not the expensive npm install measurement), overwriting each cell's
+# prediction.json with the current dist/cli.js. Meant for fast re-measurement when the evidence
+# rules changed but ground-truth (compiled=yes|no) did not; an order of magnitude faster than a
+# full run-matrix.sh (which includes npm install).
 #
-# 前置：
-#   - dist/cli.js 已 npm run build；
-#   - 镜像 nc-gt:<major>-<mode> 已由 run-matrix.sh 构建过。
+# Prerequisites:
+#   - dist/cli.js has already been npm run build'd;
+#   - the nc-gt:<major>-<mode> images were already built by run-matrix.sh.
 #
-# 用法：
-#   bash testdata/ground-truth/repredict.sh            # 全部 6 cell
-#   bash testdata/ground-truth/repredict.sh 22 glibc   # 单 cell
-#   GT_OUT=/path/to/out bash testdata/ground-truth/repredict.sh  # 指定 out 根（默认同 run-matrix）
+# Usage:
+#   bash testdata/ground-truth/repredict.sh            # all 6 cells
+#   bash testdata/ground-truth/repredict.sh 22 glibc   # a single cell
+#   GT_OUT=/path/to/out bash testdata/ground-truth/repredict.sh  # explicit out root (defaults to run-matrix's)
 set -euo pipefail
 
 HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"

@@ -12,7 +12,7 @@ import { SUPPORTED_LOCKFILES } from '../src/adapters/node/ingest'
 import type { ScanReport } from '../src/core/report'
 import { RISK_META, RiskLevel } from '../src/core/risk'
 
-/** 用户可见的「支持范围」承诺；与 `SUPPORTED_LOCKFILES` 逐一对应。 */
+/** The user-visible "supported scope" promise; mirrors `SUPPORTED_LOCKFILES` one to one. */
 const SUPPORTED_FORMATS = [
   'package-lock.json (lockfileVersion 2 / 3)',
   'pnpm-lock.yaml (packages + snapshots)',
@@ -36,10 +36,10 @@ const report: ScanReport = {
 }
 
 describe('renderSummary', () => {
-  it('每一类风险都渲染出来，数字之和等于 nativeCandidates', () => {
+  it('every risk level is rendered and the numbers sum to nativeCandidates', () => {
     const out = renderSummary(report)
     for (const level of Object.values(RiskLevel)) {
-      expect(out, `缺少 ${level} 行`).toContain(RISK_META[level].label)
+      expect(out, `missing the ${level} line`).toContain(RISK_META[level].label)
     }
     const sum = Object.values(report.summary.byRisk).reduce((a, b) => a + b, 0)
     expect(sum).toBe(report.summary.nativeCandidates)
@@ -47,7 +47,7 @@ describe('renderSummary', () => {
 })
 
 describe('renderReport · unsupported', () => {
-  it('列出工具真正支持的格式（字段不再只存在于 JSON 里）', () => {
+  it('lists the formats the tool really supports (the field no longer lives only in JSON)', () => {
     const out = renderReport({
       ...report,
       summary: {
@@ -65,13 +65,13 @@ describe('renderReport · unsupported', () => {
     expect(out).toContain('bun.lock (text)')
     expect(out).toContain('supported:')
     for (const format of SUPPORTED_FORMATS) {
-      expect(out, `渲染结果缺少 ${format}`).toContain(format)
+      expect(out, `rendered output is missing ${format}`).toContain(format)
     }
   })
 
-  it('支持范围是对用户的承诺，改动必须显式改这份清单', () => {
-    // 与 fixtures/ 的 snapshot 纪律同理：支持列表不能悄悄漂移（它曾经写死成
-    // 只有 npm，即使失败的是 pnpm / yarn / bun）。
+  it('the supported scope is a promise to users; changing it must be explicit', () => {
+    // Same discipline as the fixtures/ snapshots: the supported list must not drift
+    // silently (it used to be hardcoded to npm only, even when pnpm / yarn / bun failed).
     expect([...SUPPORTED_LOCKFILES]).toEqual(SUPPORTED_FORMATS)
   })
 })

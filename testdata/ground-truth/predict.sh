@@ -1,21 +1,22 @@
 #!/usr/bin/env bash
-# 在容器内对单个 fixture 跑 nativecheck 的 L2 预测（--deep），写入 cell 的 prediction.json。
-# 与 probe-install.sh 在同一容器跑，保证 node/libc/工具链 = 测量 cell 的 env。
+# Run nativecheck's L2 prediction (--deep) for a single fixture inside the container, writing
+# the cell's prediction.json. Runs in the same container as probe-install.sh, keeping
+# node/libc/toolchain = the measured cell's env.
 #
-# 用法：bash predict.sh <projectRoot> <cellOutDir>
-#   projectRoot: 仓库里该 fixture 的目录（只读挂载）
-#   cellOutDir:  run-matrix.sh 的 out/<node>-<libc>/
-#   依赖：$NC_REPO 指向仓库根（含 dist/cli.js），probe 前需 npm run build。
+# Usage: bash predict.sh <projectRoot> <cellOutDir>
+#   projectRoot: this fixture's directory in the repo (mounted read-only)
+#   cellOutDir:  run-matrix.sh's out/<node>-<libc>/
+#   requires: $NC_REPO points at the repo root (containing dist/cli.js); npm run build before probing.
 set -euo pipefail
 
-PROJECT_ROOT="${1:?用法: predict.sh <projectRoot> <cellOutDir>}"
-CELL="${2:?用法: predict.sh <projectRoot> <cellOutDir>}"
+PROJECT_ROOT="${1:?usage: predict.sh <projectRoot> <cellOutDir>}"
+CELL="${2:?usage: predict.sh <projectRoot> <cellOutDir>}"
 REPO="${NC_REPO:-/repo}"
 CLI="$REPO/dist/cli.js"
 FIXTURE="$(basename "$PROJECT_ROOT")"
 
 if [ ! -f "$CLI" ]; then
-  echo "warn: 找不到 $CLI（需先在仓库 npm run build），跳过预测" >&2
+  echo "warn: cannot find $CLI (run npm run build in the repo first); skipping prediction" >&2
   exit 0
 fi
 

@@ -57,7 +57,7 @@ function classifySegment(segment: string): Exclude<ScriptIntent, 'download_then_
   // benign `select` (no compile).
   // Known blind spot (documented, accepted): a custom JS downloader hidden
   // behind inline eval with vocabulary outside the regex table would be
-  // mislabeled benign. See temp/NativeCheck_改进方法评估.md §31.
+  // mislabeled benign. See the improvement-review doc §31.
   if (/\bnode\s+(?:-e|--eval)\b/.test(segment)) return 'select'
   // Weak heuristic: `node xxx.js` is usually a custom picker (esbuild is one)
   if (/\bnode\s+\S+\.js\b/.test(segment)) return 'select'

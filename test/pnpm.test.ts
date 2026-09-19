@@ -67,7 +67,7 @@ snapshots:
 `
 
 describe('parsePnpmLockfile', () => {
-  it('从 snapshots 解析包 + 依赖，从 packages 解析 os/cpu/libc', () => {
+  it('parses packages + dependencies from snapshots, os/cpu/libc from packages', () => {
     const list = parsePnpmLockfile(SAMPLE)
     const byName = new Map(list.map((p) => [p.name, p]))
 
@@ -79,7 +79,7 @@ describe('parsePnpmLockfile', () => {
 
     const watcher = byName.get('@parcel/watcher')
     expect(watcher?.dependencies?.['detect-libc']).toEqual({ name: 'detect-libc' })
-    // optional 平台包带 optional: true
+    // optional platform packages carry optional: true
     expect(watcher?.dependencies?.['@parcel/watcher-linux-x64-glibc']?.optional).toBe(true)
 
     const platform = byName.get('@parcel/watcher-linux-x64-glibc')
@@ -88,15 +88,15 @@ describe('parsePnpmLockfile', () => {
     expect(platform?.libc).toEqual(['glibc'])
   })
 
-  it('scoped 包 @scope/name@version 正确切分', () => {
+  it('splits scoped packages @scope/name@version correctly', () => {
     const list = parsePnpmLockfile(SAMPLE)
     const scoped = list.find((p) => p.name === '@parcel/watcher-linux-x64-glibc')
     expect(scoped?.version).toBe('2.4.1')
   })
 
-  it('peer 后缀的快照键不会污染 name / version', () => {
-    // 真实 pnpm v6+ 锁文件里，任何带 peer 的包都以 `name@version(peer@version)` 为键。
-    // 先按最后一个 @ 切分会得到 name=`react-dom@18.2.0(react`、version=`18.2.0)`。
+  it('a peer suffix in a snapshot key does not pollute name / version', () => {
+    // In a real pnpm v6+ lockfile every package with peers is keyed as
+    // `name@version(peer@version)`. Splitting at the first @ would yield
     const PEER = `lockfileVersion: '9.0'
 
 packages:
@@ -127,28 +127,28 @@ snapshots:
     })
   })
 
-  it('空 / 畸形 YAML → 空列表（Fail Closed）', () => {
+  it('empty / malformed YAML → empty list (fail closed)', () => {
     expect(parsePnpmLockfile('')).toEqual([])
     expect(parsePnpmLockfile('lockfileVersion: [unclosed')).toEqual([])
   })
 })
 
-describe('pnpm 集成 · scan 真实 pnpm-lock.yaml', () => {
-  it('fast scan：识别 native 候选，零网络', async () => {
+describe('pnpm integration · scan against a real pnpm-lock.yaml', () => {
+  it('fast scan: finds the native candidates, zero network', async () => {
     const { report } = await scan(pnpmRoot, { mode: 'fast', env })
     expect(report.summary.networkCalls).toBe(0)
     expect(report.summary.totalPackages).toBeGreaterThanOrEqual(40)
 
     const names = report.findings.map((f) => f.pkg.name)
-    // better-sqlite3@11 依赖 prebuild-install → C；node-pty 依赖 node-addon-api。
+    // better-sqlite3@11 depends on prebuild-install → C; node-pty depends on node-addon-api.
     expect(names).toContain('better-sqlite3')
     expect(names).toContain('node-pty')
   })
 
-  it('pnpm 无 hasInstallScript → node-pty 判 Prebuildify（B）而非 npm 下的 SourceOnly（D）', async () => {
-    // 记录 pnpm 的已知限制：pnpm-lock.yaml 不记录 hasInstallScript，因此
-    // 「node-addon-api + install 脚本」这一 D 判定信号缺失，node-pty 退化为 B。
-    // 这降低确定性（fast → UNVERIFIED），但不误报安全（deep 仍取证 prebuilds）。
+  it('without hasInstallScript node-pty is Prebuildify (B), not the SourceOnly (D) npm reports', async () => {
+    // Documented limitation: pnpm-lock.yaml does not record hasInstallScript, so the
+    // "node-addon-api + install script" signal for D is missing and node-pty degrades to B.
+    // That costs determinism (fast → UNVERIFIED) but never reports a false all-clear.
     const { report } = await scan(pnpmRoot, { mode: 'fast', env })
     const nodePty = report.findings.find((f) => f.pkg.name === 'node-pty')
     expect(nodePty?.pattern).toBe('Prebuildify')

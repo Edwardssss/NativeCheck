@@ -57,8 +57,8 @@ const throwingFetch: HttpLike = async () => {
 
 const VALID_STATUSES = ['matched', 'absent', 'unknown'] as const
 
-describe('probePrebuilds · 畸形 tarball 不抛不挂', () => {
-  it('垃圾字节（非 tar）→ 返回合法状态，不抛', async () => {
+describe('probePrebuilds · a malformed tarball neither throws nor hangs', () => {
+  it('garbage bytes (not a tar) → a valid status, no throw', async () => {
     const garbage = new Uint8Array([0xde, 0xad, 0xbe, 0xef, 1, 2, 3, 4, 5])
     const r = await probePrebuilds('https://x/x.tgz', env, {
       fetchImpl: fetchReturning(streamOf(garbage)),
@@ -66,14 +66,14 @@ describe('probePrebuilds · 畸形 tarball 不抛不挂', () => {
     expect(VALID_STATUSES).toContain(r.status)
   })
 
-  it('空流 → absent（读完无产物），不抛', async () => {
+  it('an empty stream → absent (read to the end, nothing found), no throw', async () => {
     const r = await probePrebuilds('https://x/x.tgz', env, {
       fetchImpl: fetchReturning(streamOf()),
     })
     expect(r.status).toBe('absent')
   })
 
-  it('截断的 gzip 流 → 返回合法状态，不抛', async () => {
+  it('a truncated gzip stream → a valid status, no throw', async () => {
     // gzip magic (1f 8b 08) + a few garbage bytes, truncated before a full member.
     const truncated = new Uint8Array([0x1f, 0x8b, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0xff, 0xff])
     const r = await probePrebuilds('https://x/x.tgz', env, {
@@ -82,7 +82,7 @@ describe('probePrebuilds · 畸形 tarball 不抛不挂', () => {
     expect(VALID_STATUSES).toContain(r.status)
   })
 
-  it('超大 body 触发字节上限 → unknown，不挂起', async () => {
+  it('an oversized body hits the byte cap → unknown, does not hang', async () => {
     // 1 MiB of zeros exceeds a 1 KiB cap, forcing the safety stop.
     const big = new Uint8Array(1024 * 1024)
     const r = await probePrebuilds('https://x/x.tgz', env, {
@@ -93,8 +93,8 @@ describe('probePrebuilds · 畸形 tarball 不抛不挂', () => {
   })
 })
 
-describe('verifyCandidate · 异常网络/响应 → 降级不抛', () => {
-  it('B + fetch 抛异常 → b=unknown，不抛', async () => {
+describe('verifyCandidate · broken network / response → degrades instead of throwing', () => {
+  it('B + fetch throws → b=unknown, no throw', async () => {
     const r = await verifyCandidate(
       candidate('x', DistributionPattern.Prebuildify, NativeVerdict.Yes),
       env,
@@ -103,7 +103,7 @@ describe('verifyCandidate · 异常网络/响应 → 降级不抛', () => {
     expect(r.b?.status).toBe('unknown')
   })
 
-  it('B + manifest 非 JSON → 降级 unknown，不抛', async () => {
+  it('B + a non-JSON manifest → degrades to unknown, no throw', async () => {
     const garbage = new Uint8Array([0x7b, 0x22, 0x6e, 0x6f, 0x74, 0x20, 0x6a, 0x73, 0x6f, 0x6e])
     const r = await verifyCandidate(
       candidate('x', DistributionPattern.Prebuildify, NativeVerdict.Yes),
@@ -113,7 +113,7 @@ describe('verifyCandidate · 异常网络/响应 → 降级不抛', () => {
     expect(r.b?.status).toBe('unknown')
   })
 
-  it('C + fetch 抛异常 → remote=unverified，不抛', async () => {
+  it('C + fetch throws → remote=unverified, no throw', async () => {
     const r = await verifyCandidate(
       candidate('x', DistributionPattern.RemoteDownload, NativeVerdict.Yes),
       env,
@@ -122,7 +122,7 @@ describe('verifyCandidate · 异常网络/响应 → 降级不抛', () => {
     expect(r.remote).toBe('unverified')
   })
 
-  it('SUSPICIOUS + fetch 抛异常 → 仅记网络调用，不抛', async () => {
+  it('SUSPICIOUS + fetch throws → only the network call is counted, no throw', async () => {
     const r = await verifyCandidate(
       candidate('x', DistributionPattern.NotNative, NativeVerdict.Suspicious),
       env,
@@ -132,14 +132,14 @@ describe('verifyCandidate · 异常网络/响应 → 降级不抛', () => {
   })
 })
 
-describe('probeRemoteHead · HEAD 异常 → unverified', () => {
-  it('fetch 抛异常 → unverified，不抛', async () => {
+describe('probeRemoteHead · HEAD failures → unverified', () => {
+  it('fetch throws → unverified, no throw', async () => {
     expect(await probeRemoteHead('https://x/releases/x.tar.gz', { fetchImpl: throwingFetch })).toBe(
       'unverified',
     )
   })
 
-  it('HTTP 500 → unverified（非 200/404 一律不猜）', async () => {
+  it('HTTP 500 → unverified (anything that is not 200/404 is never guessed)', async () => {
     expect(
       await probeRemoteHead('https://x/releases/x.tar.gz', {
         fetchImpl: fetchReturning(null, 500),

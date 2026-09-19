@@ -1,15 +1,16 @@
 #!/usr/bin/env bash
-# Ground Truth Docker matrix 编排（方案 §13.2/§13.4）。
+# Ground Truth Docker matrix orchestration (design doc §13.2/§13.4).
 #
-# 矩阵：Node {20,22,24} × libc {glibc, musl} × {linux-x64}（x64 本机可跑；
-# arm64/darwin/win32 用 GitHub Actions runner，见 .github/workflows）。
+# Matrix: Node {20,22,24} × libc {glibc, musl} × {linux-x64} (x64 can run on this machine;
+# arm64/darwin/win32 use GitHub Actions runners, see .github/workflows).
 #
-# 每个 cell：构建镜像 → 对 fixtures/ 下每个含 package-lock.json 的样本
-# 依次跑 probe-install.sh → 结果写 out/<cell>/，最后 collect.py 汇总四格表。
+# Per cell: build the image -> for every sample under fixtures/ that has a package-lock.json
+# run probe-install.sh in turn -> results go to out/<cell>/, then collect.py builds the
+# four-square table.
 #
-# 用法（需 Docker）：
-#   bash testdata/ground-truth/run-matrix.sh            # 跑全部 6 个 cell
-#   bash testdata/ground-truth/run-matrix.sh 22 glibc   # 只跑一个 cell
+# Usage (Docker required):
+#   bash testdata/ground-truth/run-matrix.sh            # run all 6 cells
+#   bash testdata/ground-truth/run-matrix.sh 22 glibc   # run a single cell
 set -euo pipefail
 
 HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -21,7 +22,7 @@ mkdir -p "$OUT_ROOT"
 NODE_MAJORS=("${NC_NODE_MAJORS:-20 22 24}")
 LIBMODES=("${NC_LIBMODES:-glibc musl}")
 
-# libc → 基础镜像 tag
+# libc -> base image tag
 base_for() {
   local major="$1" mode="$2"
   if [ "$mode" = "musl" ]; then echo "node:${major}-alpine"; else echo "node:${major}-bookworm-slim"; fi
@@ -42,10 +43,11 @@ measure_cell() {
   local cell="$OUT_ROOT/${major}-${mode}"
   mkdir -p "$cell"
 
-  # 对每个真实 fixture 样本（含 package-lock.json）逐一测量。
-  # 用 find 抓含 package-lock.json 的目录；排除 unsupported（它们本来就不该被 npm 装）。
-  # 测量 + 预测在同一容器内跑：保证预测的 env（node/libc/工具链）与测量 cell 完全一致
-  # —— 这是 L2 四格表成立的前提（宿主机 env ≠ 容器 env 会导致预测错位）。
+  # Measure every real fixture sample (those with a package-lock.json), one by one.
+  # find collects the directories holding a package-lock.json; unsupported/ is excluded
+  # (npm is not supposed to install those anyway). Measurement + prediction run in the same
+  # container, keeping the prediction env (node/libc/toolchain) identical to the measured cell
+  # -- the precondition for the L2 four-square table (host env != container env would drift).
   local cells_count=0
   while IFS= read -r lockfile; do
     local project
@@ -54,7 +56,7 @@ measure_cell() {
     rel="$(realpath --relative-to="$FIXTURES" "$project")"
     case "$rel" in unsupported/*) continue ;; esac
     echo "  probe: $rel"
-    # 挂载仓库（只读 fixture 作安装源）与 out 目录（收集结果）
+    # Mount the repo (read-only fixtures as the install source) and the out dir (result collection)
     docker run --rm \
       -v "$REPO_ROOT:$REPO_ROOT:ro" \
       -v "$OUT_ROOT:$OUT_ROOT" \
@@ -85,5 +87,5 @@ run_all() {
 }
 
 run_all "$@"
-echo "==== 汇总 ===="
+echo "==== summary ===="
 python3 "$HERE/collect.py" "$OUT_ROOT"

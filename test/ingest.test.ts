@@ -90,8 +90,8 @@ function viteLike(peerNames: readonly string[]): Record<string, unknown> {
   }
 }
 
-describe('ingest · S5 平台子包簇只认包自己的 optionalDependencies', () => {
-  it('可选 peer（peerDependenciesMeta.optional）不构成平台子包簇', async () => {
+describe('ingest · S5 platform cluster counts only the package\'s own optionalDependencies', () => {
+  it('optional peers (peerDependenciesMeta.optional) are not a platform cluster', async () => {
     const peers = ['less', 'sass', 'terser', 'tsx', 'yaml', 'sugarss']
     const packages = await ingestProject({
       dependencies: { 'vite-like': '1.0.0' },
@@ -107,7 +107,7 @@ describe('ingest · S5 平台子包簇只认包自己的 optionalDependencies', 
     expect(classifyPackage(vite as LockfilePackage)).toBe(DistributionPattern.NotNative)
   })
 
-  it('真正的 optionalDependencies 仍判为模式 A（不过度修正）', async () => {
+  it('genuine optionalDependencies still classify as pattern A (no overcorrection)', async () => {
     const packages = await ingestProject({
       dependencies: { 'esbuild-like': '1.0.0' },
       packages: {
@@ -132,8 +132,8 @@ describe('ingest · S5 平台子包簇只认包自己的 optionalDependencies', 
   })
 })
 
-describe('ingest · S1 平台约束（os / cpu / libc）不再丢失', () => {
-  it('子包的 os / cpu 被采集（arborist 只把它们放在 node.package 上）', async () => {
+describe('ingest · S1 platform constraints (os / cpu / libc) are no longer dropped', () => {
+  it('a sub-package\'s os / cpu are collected (arborist keeps them only on node.package)', async () => {
     const packages = await ingestProject({
       dependencies: { 'esbuild-like': '1.0.0' },
       packages: {
@@ -153,7 +153,7 @@ describe('ingest · S1 平台约束（os / cpu / libc）不再丢失', () => {
     expect(sub?.cpu).toEqual(['x64'])
   })
 
-  it('libc 约束被采集（Alpine 场景）', async () => {
+  it('libc constraints are collected (the Alpine case)', async () => {
     const packages = await ingestProject({
       dependencies: { 'musl-addon': '1.0.0' },
       packages: {
@@ -163,7 +163,7 @@ describe('ingest · S1 平台约束（os / cpu / libc）不再丢失', () => {
     expect(packages['musl-addon@1.0.0']?.libc).toEqual(['musl'])
   })
 
-  it('无平台约束的包保持 undefined（不臆造）', async () => {
+  it('a package without platform constraints stays undefined (nothing invented)', async () => {
     const packages = await ingestProject({
       dependencies: { plain: '1.0.0' },
       packages: { 'node_modules/plain': { version: '1.0.0' } },

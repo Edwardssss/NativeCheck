@@ -48,12 +48,12 @@ describe('scanReportSchema', () => {
           blockers: [],
           allowScripts: {
             policy: 'blocked',
-            detail: 'npm 12 默认阻止 install 脚本',
+            detail: 'npm 12 blocks install scripts by default',
             remedy: 'npm approve-scripts node-pty',
           },
           systemLibs: {
             libs: ['libpcap'],
-            detail: '可能链接系统库 libpcap',
+            detail: 'this package may link the system library libpcap',
             remedy: 'apt install libpcap-dev',
           },
           paths: [],

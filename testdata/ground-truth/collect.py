@@ -1,31 +1,32 @@
 #!/usr/bin/env python3
 """
-Ground Truth 汇总：把每个 cell 的真实安装结果 fold 成分层准确率表。
+Ground Truth summary: fold each cell's real install results into a layered accuracy table.
 
-方案 §13.3 —— 分三层统计，不混成一个数字：
+Design doc §13.3 -- three separate layers, never collapsed into one number:
 
-  层  | 判定内容             | 指标
-  ----+---------------------+---------------------------
-  L1  | 是不是 native 包     | 漏报率（权重×2）
-  L2  | 走预编译还是源码构建 | FP / FN 率
-  L3  | 缺失哪些工具链       | 阻塞项召回率
+  layer | what it decides              | metric
+  ------+------------------------------+----------------------------------
+  L1    | is it a native package       | miss rate (weight x2)
+  L2    | prebuilt or source build     | FP / FN rate
+  L3    | which toolchains missing     | blocker recall
 
-输入：run-matrix.sh 产出的 out/<cell>/<fixture>/result.properties
-      （compiled: yes|no 是编译器 wrapper 的物理事实 —— 编译必经编译器）。
+Input: out/<cell>/<fixture>/result.properties produced by run-matrix.sh
+      (compiled: yes|no is a physical fact from the compiler wrappers -- a build goes through a compiler).
 
-预测来源（env-accurate，首选）：
-  predict.sh 在每个 cell 容器内跑 `nativecheck --deep`，把预测写到
-  out/<cell>/<fixture>.prediction.json —— 与被测 cell 同一 env（node/libc/工具链）
-  生成，因此 L2 预测跟测量严格对齐（宿主机 env ≠ musl cell env 会导致错位）。
+Prediction source (env-accurate, preferred):
+  predict.sh runs `nativecheck --deep` inside each cell container and writes the prediction to
+  out/<cell>/<fixture>.prediction.json -- generated in the same env (node/libc/toolchain) as the
+  measured cell, so the L2 prediction stays strictly aligned with the measurement (a host env
+  != musl cell env would drift).
 
-  fallback：--predict <file.jsonl>（每行 {fixture, strategy, blockers}，跨 cell 共享）
-  仅当 cell 内没产预测文件、又想本地手搓预测时用。
+  fallback: --predict <file.jsonl> (one {fixture, strategy, blockers} per line, shared across cells)
+  only for when a cell produced no prediction file and you want to hand-roll one locally.
 
-用法：
+Usage:
   python3 testdata/ground-truth/collect.py testdata/ground-truth/out
   python3 testdata/ground-truth/collect.py out --blockers
 
-依赖：仅标准库（properties 用行式 key=value 读，不引 PyYAML）。
+Deps: standard library only (properties are read as line-based key=value, no PyYAML).
 """
 from __future__ import annotations
 
@@ -49,20 +50,21 @@ def read_properties(path: str) -> dict[str, str]:
 
 
 def load_prediction_json(path: str) -> dict | None:
-    """读 predict.sh 产出的 <fixture>.prediction.json；坏文件视为无预测。"""
+    """Read <fixture>.prediction.json produced by predict.sh; a broken file means no prediction."""
     try:
         with open(path, "r", encoding="utf-8") as f:
             data = json.load(f)
         if not isinstance(data, dict):
             return None
-        # 记录产预测的容器 env，便于对照是否为同 env（审计用，不计入指标）
+        # Record the env of the container that produced it, to check for an env mismatch
+        # (auditing only, not a metric)
         return data
     except (OSError, ValueError):
         return None
 
 
 def load_predictions(out_root: str) -> dict[tuple[str, str], dict]:
-    """自动发现 out/<cell>/<fixture>.prediction.json，按 (cell, fixture) 键控。"""
+    """Auto-discover out/<cell>/<fixture>.prediction.json, keyed by (cell, fixture)."""
     preds: dict[tuple[str, str], dict] = {}
     for cell in sorted(glob.glob(os.path.join(out_root, "*-*"))):
         if not os.path.isdir(cell):
@@ -79,20 +81,20 @@ def load_predictions(out_root: str) -> dict[tuple[str, str], dict]:
 
 def main() -> int:
     p = argparse.ArgumentParser(description=__doc__)
-    p.add_argument("out_root", help="run-matrix.sh 的 out 根目录")
+    p.add_argument("out_root", help="the out root directory produced by run-matrix.sh")
     p.add_argument(
         "--predict",
-        help="可选 fallback：跨 cell 共享的 jsonl（每行 {fixture, strategy, blockers}）；"
-        "仅在没有 cell 内预测文件时兜底",
+        help="optional fallback: a jsonl shared across cells ({fixture, strategy, blockers} per line);"
+        "used only when a cell has no in-cell prediction file",
     )
     p.add_argument(
         "--blockers",
         action="store_true",
-        help="附带 L3 阻塞项统计（需预测含 blockers 计数值，非空=预测有阻塞）",
+        help="also report L3 blocker statistics (needs a blocker count in the prediction; non-zero = blockers predicted)",
     )
     args = p.parse_args()
 
-    # fallback jsonl（cell 内无预测文件时兜底）
+    # fallback jsonl (used when a cell has no prediction file)
     fallback: dict[str, dict] = {}
     if args.predict:
         with open(args.predict, "r", encoding="utf-8") as f:
@@ -113,18 +115,20 @@ def main() -> int:
 
     def pred_for(cell: str, fixture: str) -> dict:
         row = cell_preds.get((cell, fixture)) or fallback.get(fixture, {})
-        # 归一化 blockers：predict.sh 记成 int 计数；旧 jsonl 可能是数组。统一成计数。
+        # Normalize blockers: predict.sh records an int count; an old jsonl may hold an array.
+        # Coerce both into a count.
         b = row.get("blockers")
         if isinstance(b, (list, tuple)):
             row["blockers"] = len(b)
         elif not isinstance(b, (int, float)) or isinstance(b, bool):
-            row["blockers"] = None  # 没给 → 不参与 L3
+            row["blockers"] = None  # not given -> excluded from L3
         return row
 
     grand = {"yes": 0, "no": 0, "failed": 0}
-    # L2 聚合四格表；每 (cell, fixture) 一条样本
+    # L2 aggregate four-square table; one sample per (cell, fixture)
     tp = fp = fn = tn = 0
-    # 预测"不确定"的样本（risk=UNVERIFIED/AMBIGUOUS）：不猜编译/免编，单列，不进四格表。
+    # Samples whose prediction is “undetermined” (risk=UNVERIFIED/AMBIGUOUS): do not guess
+    # compile/prebuilt, count them separately, and keep them out of the four-square table.
     l2_undetermined = 0
     l3_predict_block = 0
     l3_with_pred = 0
@@ -139,8 +143,9 @@ def main() -> int:
             compiled = r.get("compiled", "?")
             inst = r.get("install", "?")
 
-            # 安装失败 ≠ 免编译：install-failed 时编译结果不可信（环境失败，非"免编译"证据），
-            # 单独成桶，绝不混入 compiled yes/no 分桶，也不进 L2 四格表。
+            # install-failed != prebuilt: on install-failed the compile result is not trustworthy
+            # (an env failure, not evidence of “prebuilt”), so it gets its own bucket and never
+            # mixes into the compiled yes/no buckets, nor into the L2 four-square table.
             if inst == "install-failed":
                 stat["failed"] += 1
                 grand["failed"] += 1
@@ -155,17 +160,19 @@ def main() -> int:
                 grand["failed"] += 1
 
             pred = pred_for(name, fixture)
-            # predict.sh 记录 source: prediction file（env-accurate）；fallback jsonl 标 [fb]
+            # predict.sh records source: prediction file (env-accurate); the fallback jsonl is tagged [fb]
             src_tag = "[fb]" if not cell_preds.get((name, fixture)) else ""
             pred_strategy = pred.get("strategy") or "?"
             pred_risk = pred.get("risk") or "?"
             nb = pred.get("blockers") or 0
             rows.append((fixture, compiled, inst, pred_strategy, pred_risk, src_tag, nb))
 
-            # ---- L2 四格表 ----
-            # 预测的"确定性"由 risk 表达（strategy 是乐观默认，risk 才是确定/不确定信号）：
-            #   LOW/MEDIUM/HIGH = 确定；UNVERIFIED/AMBIGUOUS = 不确定 → 单列，不进四格表。
-            # 故这里只统计 install=ok 且 risk 确定的样本。
+            # ---- L2 four-square table ----
+            # A prediction's “certainty” is carried by risk (strategy is the optimistic default;
+            #   risk is the determinate/undetermined signal):
+            #   LOW/MEDIUM/HIGH = determinate; UNVERIFIED/AMBIGUOUS = undetermined -> counted
+            #   separately, kept out of the four-square table.
+            # So only install=ok samples with a determinate risk are counted here.
             if pred_strategy and pred_strategy != "?" and inst != "install-failed":
                 if pred_risk in ("UNVERIFIED", "AMBIGUOUS"):
                     l2_undetermined += 1
@@ -181,8 +188,8 @@ def main() -> int:
                     else:
                         tn += 1
 
-            # ---- L3 统计：预测本身给了阻塞项计数的样本里，有多少非空 ----
-            # （install-failed 恰是阻塞判断的关键信号，保留其参与）
+            # ---- L3 stats: of the samples whose own prediction gives a blocker count, how many are non-zero ----
+            # (install-failed is exactly the key signal for the blocker call, so it still takes part)
             if pred.get("blockers") is not None:
                 l3_with_pred += 1
                 if nb > 0:
@@ -193,7 +200,7 @@ def main() -> int:
         for fixture, compiled, inst, pred_s, pred_risk, src_tag, nb in rows:
             print(f"      {fixture:<24} {compiled:<8} {inst:<7} {pred_s:<12} {pred_risk:<10} {src_tag:<4} {nb}")
 
-    # ---- L2 四格表（跨 cell 聚合）----
+    # ---- L2 four-square table (aggregated across cells) ----
     print(
         "\n=== L2 four-square table (predicted SOURCE_BUILD x actually compiled; "
         "install=ok and determinate risk only) ==="
@@ -207,10 +214,11 @@ def main() -> int:
     fp_rate = fp / fp_denom if fp_denom else float("nan")
     print(f"  L2 FN miss rate={fn_rate:.2%}   L2 FP false-alarm rate={fp_rate:.2%}")
 
-    # ---- 方案 E：确定性覆盖率（Fail-Closed 的诚实度量）----
-    # 四格表只统计「确定」样本；UNVERIFIED 单列。但「全判 UNVERIFIED」会让 FN/FP 双零、
-    # 数字好看却回避了判定 —— 覆盖率把这种回避暴露出来：确定性三态化的前提是
-    # 「宁可灰色不可猜错」与「不回避判定」必须同时成立。
+    # ---- Option E: determinate coverage (an honest measure of fail-closed) ----
+    # The four-square table counts only “determinate” samples; UNVERIFIED is separate. But
+    # “verdict everything UNVERIFIED” would drive FN/FP to zero -- nice-looking numbers that
+    # dodge the decision -- so coverage exposes that dodge: the three-state design only holds
+    # if “rather grey than wrong” and “never dodge a verdict” both stand at once.
     determinate = tp + fp + fn + tn
     install_ok = determinate + l2_undetermined
     coverage = determinate / install_ok if install_ok else float("nan")

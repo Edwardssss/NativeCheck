@@ -30,7 +30,7 @@ const env: Environment = {
 }
 
 describe('parsePrebuildEntry', () => {
-  it('解析老式平铺 platform-arch', () => {
+  it('parses old flat platform-arch entries', () => {
     expect(parsePrebuildEntry('darwin-arm64.node')).toEqual({
       platform: 'darwin',
       arch: 'arm64',
@@ -38,7 +38,7 @@ describe('parsePrebuildEntry', () => {
       abi: null,
     })
   })
-  it('识别老式平铺的 linux musl 尾巴', () => {
+  it('recognises the linux musl suffix in old flat entries', () => {
     expect(parsePrebuildEntry('linuxmusl-x64.node')).toEqual({
       platform: 'linux',
       arch: 'x64',
@@ -46,7 +46,7 @@ describe('parsePrebuildEntry', () => {
       abi: null,
     })
   })
-  it('win32 平台名含数字也能解析', () => {
+  it('parses a win32 platform name containing digits', () => {
     expect(parsePrebuildEntry('win32-x64.node')).toEqual({
       platform: 'win32',
       arch: 'x64',
@@ -54,7 +54,7 @@ describe('parsePrebuildEntry', () => {
       abi: null,
     })
   })
-  it('解析新式子目录 glibc 变体（bcrypt 式）', () => {
+  it('parses the new subdirectory glibc variant (bcrypt style)', () => {
     expect(parsePrebuildEntry('linux-x64/bcrypt.glibc.node')).toEqual({
       platform: 'linux',
       arch: 'x64',
@@ -62,7 +62,7 @@ describe('parsePrebuildEntry', () => {
       abi: null,
     })
   })
-  it('解析新式子目录 musl 变体', () => {
+  it('parses the new subdirectory musl variant', () => {
     expect(parsePrebuildEntry('linux-x64/bcrypt.musl.node')).toEqual({
       platform: 'linux',
       arch: 'x64',
@@ -70,7 +70,7 @@ describe('parsePrebuildEntry', () => {
       abi: null,
     })
   })
-  it('解析新式子目录 N-API 与 ABI 后缀', () => {
+  it('parses the new subdirectory N-API and ABI suffixes', () => {
     expect(parsePrebuildEntry('linux-x64/node.napi.node')).toEqual({
       platform: 'linux',
       arch: 'x64',
@@ -84,7 +84,7 @@ describe('parsePrebuildEntry', () => {
       abi: '127',
     })
   })
-  it('非 linux 平台子目录无 libc 变体', () => {
+  it('non-linux platform subdirectories carry no libc variant', () => {
     expect(parsePrebuildEntry('darwin-x64/bcrypt.node')).toEqual({
       platform: 'darwin',
       arch: 'x64',
@@ -92,7 +92,7 @@ describe('parsePrebuildEntry', () => {
       abi: null,
     })
   })
-  it('非 .node / 无关文件返回 null', () => {
+  it('non-.node / unrelated files return null', () => {
     expect(parsePrebuildEntry('README')).toBeNull()
     expect(parsePrebuildEntry('libvips-cpp.so')).toBeNull()
   })
@@ -101,27 +101,27 @@ describe('parsePrebuildEntry', () => {
 describe('prebuildMatchesEnv', () => {
   const t = (s: string) => parsePrebuildEntry(s)!
   const muslEnv: Environment = { ...env, libc: 'musl' }
-  it('glibc 机器命中 glibc 变体 / 通用产物', () => {
+  it('a glibc machine matches glibc variants / generic artifacts', () => {
     expect(prebuildMatchesEnv(t('linux-x64/bcrypt.glibc.node'), env)).toBe(true)
     expect(prebuildMatchesEnv(t('linux-x64.node'), env)).toBe(true)
   })
-  it('glibc 机器不命中显式 musl 产物', () => {
+  it('a glibc machine does not match an explicit musl artifact', () => {
     expect(prebuildMatchesEnv(t('linux-x64/bcrypt.musl.node'), env)).toBe(false)
   })
-  it('musl 机器必须命中 musl 产物或通用产物', () => {
+  it('a musl machine must match a musl artifact or a generic one', () => {
     expect(prebuildMatchesEnv(t('linux-x64/bcrypt.musl.node'), muslEnv)).toBe(true)
     expect(prebuildMatchesEnv(t('linuxmusl-x64.node'), muslEnv)).toBe(true)
-    expect(prebuildMatchesEnv(t('linux-x64.node'), muslEnv)).toBe(true) // 老式平铺无 libc，不拒绝
+    expect(prebuildMatchesEnv(t('linux-x64.node'), muslEnv)).toBe(true) // old flat entry, no libc: not rejected
     expect(prebuildMatchesEnv(t('linux-x64/bcrypt.glibc.node'), muslEnv)).toBe(false)
   })
-  it('平台或架构不匹配 → false', () => {
+  it('platform or arch mismatch → false', () => {
     expect(prebuildMatchesEnv(t('win32-x64.node'), env)).toBe(false)
     expect(prebuildMatchesEnv(t('linux-arm64.node'), env)).toBe(false)
   })
 })
 
 describe('parseGithubRepo', () => {
-  it('解析 git:// / git+https:// / https:// / SSH 形态', () => {
+  it('parses git:// / git+https:// / https:// / SSH forms', () => {
     expect(parseGithubRepo('git://github.com/WiseLibs/better-sqlite3.git')).toBe(
       'https://github.com/WiseLibs/better-sqlite3',
     )
@@ -133,19 +133,19 @@ describe('parseGithubRepo', () => {
     )
     expect(parseGithubRepo('git@github.com:user/repo.git')).toBe('https://github.com/user/repo')
   })
-  it('非 GitHub / 缺 URL → null', () => {
+  it('non-GitHub / missing URL → null', () => {
     expect(parseGithubRepo(undefined)).toBeNull()
     expect(parseGithubRepo('https://gitlab.com/user/repo.git')).toBeNull()
   })
 })
 
 describe('isNapiBuild', () => {
-  it('build/prebuild 脚本含 --napi → true（bcrypt/microtime 式）', () => {
+  it('build/prebuild script with --napi → true (bcrypt/microtime style)', () => {
     expect(isNapiBuild({ build: 'prebuildify --napi --tag-libc' })).toBe(true)
     expect(isNapiBuild({ prebuild: 'prebuildify --napi' })).toBe(true)
     expect(isNapiBuild({ build: 'prebuildify --n-api' })).toBe(true)
   })
-  it('无 --napi 信号 → false（better-sqlite3@13 老式平铺）', () => {
+  it('no --napi signal → false (better-sqlite3@13 old flat layout)', () => {
     expect(isNapiBuild({ build: 'prebuildify' })).toBe(false)
     expect(isNapiBuild({ prebuild: 'prebuildify --tag-uv' })).toBe(false)
     expect(isNapiBuild({})).toBe(false)
@@ -153,16 +153,16 @@ describe('isNapiBuild', () => {
 })
 
 describe('isNapiBindingGyp', () => {
-  it('binding.gyp 含 NAPI_VERSION 宏 → true（better-sqlite3 v13 式）', () => {
+  it('binding.gyp with the NAPI_VERSION macro → true (better-sqlite3 v13 style)', () => {
     expect(isNapiBindingGyp("'defines': ['NAPI_VERSION=10', 'NAPI_DISABLE_CPP_EXCEPTIONS']")).toBe(
       true,
     )
     expect(isNapiBindingGyp("'variables': { 'NAPI_VERSION%': 8 }")).toBe(true)
   })
-  it('binding.gyp 含 NODE_API_MODULE → true', () => {
+  it('binding.gyp with NODE_API_MODULE → true', () => {
     expect(isNapiBindingGyp("'defines': ['NODE_API_MODULE']")).toBe(true)
   })
-  it('普通 binding.gyp（V8/NAN ABI）→ false', () => {
+  it('plain binding.gyp (V8/NAN ABI) → false', () => {
     expect(isNapiBindingGyp("'defines': ['V8_DEPRECATION_WARNINGS=1']")).toBe(false)
     expect(isNapiBindingGyp("'sources': ['src/bcrypt.cc']")).toBe(false)
     expect(isNapiBindingGyp('')).toBe(false)
@@ -170,7 +170,7 @@ describe('isNapiBindingGyp', () => {
 })
 
 describe('deriveRemoteUrlFromMeta', () => {
-  it('canvas：-r napi + napi_versions=[7] → napi-v7（repo 取 Automattic/node-canvas）', () => {
+  it('canvas: -r napi + napi_versions=[7] → napi-v7 (repo resolved to Automattic/node-canvas)', () => {
     const url = deriveRemoteUrlFromMeta(
       'canvas',
       '3.2.3',
@@ -187,7 +187,7 @@ describe('deriveRemoteUrlFromMeta', () => {
     )
   })
 
-  it('keytar：config.runtime=napi + target=3 → napi-v3', () => {
+  it('keytar: config.runtime=napi + target=3 → napi-v3', () => {
     const url = deriveRemoteUrlFromMeta('keytar', '7.9.0', env, {
       binary: { napi_versions: [3] },
       config: { runtime: 'napi', target: 3 },
@@ -199,7 +199,7 @@ describe('deriveRemoteUrlFromMeta', () => {
     )
   })
 
-  it('better-sqlite3：node 运行时 + repo 取 WiseLibs → node-v{abi}', () => {
+  it('better-sqlite3: node runtime + repo resolved to WiseLibs → node-v{abi}', () => {
     const url = deriveRemoteUrlFromMeta('better-sqlite3', '11.10.0', env, {
       binary: null,
       config: null,
@@ -211,7 +211,7 @@ describe('deriveRemoteUrlFromMeta', () => {
     )
   })
 
-  it('musl 平台 → {libc}=musl，产物名带 linuxmusl', () => {
+  it('musl platform → {libc}=musl and the artifact name carries linuxmusl', () => {
     const muslEnv: Environment = { ...env, libc: 'musl' }
     const url = deriveRemoteUrlFromMeta('better-sqlite3', '11.10.0', muslEnv, {
       binary: null,
@@ -224,7 +224,7 @@ describe('deriveRemoteUrlFromMeta', () => {
     )
   })
 
-  it('binary.host + package_name 模板 → 展开 {module_name}/{node_abi}/{version}', () => {
+  it('binary.host + package_name template → expands {module_name}/{node_abi}/{version}', () => {
     const url = deriveRemoteUrlFromMeta('some-addon', '1.2.3', env, {
       binary: {
         host: 'https://example.com/releases/download',
@@ -241,7 +241,7 @@ describe('deriveRemoteUrlFromMeta', () => {
     )
   })
 
-  it('缺仓库且无 binary.host → null（不猜 github.com/{name}）', () => {
+  it('no repository and no binary.host → null (never guesses github.com/{name})', () => {
     expect(
       deriveRemoteUrlFromMeta('canvas', '3.2.3', env, {
         binary: { napi_versions: [7] },
@@ -252,7 +252,7 @@ describe('deriveRemoteUrlFromMeta', () => {
     ).toBeNull()
   })
 
-  it('napi 运行时但无 target/napi_versions → null（无法确定 ABI）', () => {
+  it('napi runtime without target/napi_versions → null (the ABI cannot be determined)', () => {
     expect(
       deriveRemoteUrlFromMeta('x', '1.0.0', env, {
         binary: null,
@@ -304,7 +304,7 @@ describe('deriveRemoteUrlFromMeta · node-pre-gyp', () => {
     )
   })
 
-  it('bcrypt@3：{node_abi}=node-v127 默认模板（host 已含 download 路径）', () => {
+  it('bcrypt@3: {node_abi}=node-v127 default template (host already has the download path)', () => {
     const url = deriveRemoteUrlFromMeta('bcrypt', '3.0.8', env, {
       binary: {
         host: 'https://github.com/kelektiv/node.bcrypt.js/releases/download/',
@@ -319,7 +319,7 @@ describe('deriveRemoteUrlFromMeta · node-pre-gyp', () => {
     )
   })
 
-  it('sqlite3@3：S3 host + {toolset} 空 + 默认 package_name={node_abi}-{platform}-{arch}', () => {
+  it('sqlite3@3: S3 host + empty {toolset} + default package_name={node_abi}-{platform}-{arch}', () => {
     const url = deriveRemoteUrlFromMeta('sqlite3', '3.1.13', env, {
       binary: {
         host: 'https://mapbox-node-binary.s3.amazonaws.com',
@@ -334,7 +334,7 @@ describe('deriveRemoteUrlFromMeta · node-pre-gyp', () => {
     )
   })
 
-  it('node-pre-gyp 缺 binary.host → null（validate_config 强制，无法推导）', () => {
+  it('node-pre-gyp without binary.host → null (validate_config mandates it, nothing to derive)', () => {
     expect(
       deriveRemoteUrlFromMeta('x', '1.0.0', env, {
         binary: { module_name: 'x' },
@@ -343,7 +343,7 @@ describe('deriveRemoteUrlFromMeta · node-pre-gyp', () => {
     ).toBeNull()
   })
 
-  it('musl 机器 {libc}=musl', () => {
+  it('musl machine → {libc}=musl', () => {
     const muslEnv: Environment = { ...env, libc: 'musl' }
     const url = deriveRemoteUrlFromMeta(
       'bcrypt',
@@ -366,7 +366,7 @@ describe('deriveRemoteUrlFromMeta · node-pre-gyp', () => {
 })
 
 describe('resolveDownloadAbi', () => {
-  it('napi_versions 取 ≤ 本机 napi 的最大值', () => {
+  it('napi_versions picks the largest value <= the host napi', () => {
     expect(
       resolveDownloadAbi(
         { binary: { napi_versions: [3, 7, 9] } },
@@ -375,7 +375,7 @@ describe('resolveDownloadAbi', () => {
       ),
     ).toBe('7')
   })
-  it('config.target 数字优先于 napi_versions', () => {
+  it('a numeric config.target outranks napi_versions', () => {
     expect(
       resolveDownloadAbi(
         { binary: { napi_versions: [3, 7] }, config: { target: 3 } },
@@ -384,13 +384,13 @@ describe('resolveDownloadAbi', () => {
       ),
     ).toBe('3')
   })
-  it('node 运行时 → env.nodeAbi', () => {
+  it('node runtime → env.nodeAbi', () => {
     expect(resolveDownloadAbi({}, env, 'node')).toBe('127')
   })
 })
 
 describe('getBestNapiBuildVersion', () => {
-  it('取 ≤ 本机 napi 的最大值；本机 napi 低于全部候选时 null', () => {
+  it('largest value <= host napi; null when host napi is below every candidate', () => {
     expect(getBestNapiBuildVersion([3, 7, 9], { ...env, napiVersion: '8' })).toBe(7)
     expect(getBestNapiBuildVersion([3], { ...env, napiVersion: '10' })).toBe(3)
     expect(getBestNapiBuildVersion([9], { ...env, napiVersion: '8' })).toBeNull()
@@ -399,12 +399,12 @@ describe('getBestNapiBuildVersion', () => {
 })
 
 /* ------------------------------------------------------------------ *
- * mock fetch 驱动的 IO
+ * IO driven by a mock fetch
  * ------------------------------------------------------------------ */
 
-/** 构造一个最小 npm 布局的 tar 字节流：根是 `package/`，内含 prebuilds/<file>。
- *  `file` 可含子目录（如 `linux-x64/bcrypt.glibc.node`）以覆盖新式 prebuildify 布局。
- *  `bindingGyp` 传入时会在包根写一个 binding.gyp（用于 N-API 信号测试）。 */
+/** Build a minimal npm-layout tar byte stream: root is `package/`, holding prebuilds/<file>.
+ *  `file` may contain subdirectories (e.g. `linux-x64/bcrypt.glibc.node`) to cover the new
+ *  prebuildify layout. Passing `bindingGyp` writes a binding.gyp at the package root. */
 async function buildTarBuffer(files: string[], bindingGyp?: string): Promise<Uint8Array> {
   const { mkdtemp, mkdir, writeFile, rm, readFile } = await import('node:fs/promises')
   const { tmpdir } = await import('node:os')
@@ -445,7 +445,7 @@ function mockFetchReturningTar(tarBytes: Uint8Array): HttpLike {
 }
 
 describe('probePrebuilds', () => {
-  it('老式平铺产物（无 ABI 标注）→ unknown（无法断定是否免编译）', async () => {
+  it('old flat artifact (no ABI tag) → unknown (cannot tell whether it needs compiling)', async () => {
     const tarBytes = await buildTarBuffer(['linux-x64', 'win32-x64'])
     const fetchImpl = mockFetchReturningTar(tarBytes)
     const r = await probePrebuilds('https://example/x.tgz', env, { fetchImpl })
@@ -454,7 +454,7 @@ describe('probePrebuilds', () => {
     expect(r.hasBindingGyp).toBe(false)
   })
 
-  it('老式平铺 + binding.gyp 含 NAPI_VERSION → matched（better-sqlite3 v13 式 N-API）', async () => {
+  it('old flat + binding.gyp with NAPI_VERSION → matched (better-sqlite3 v13 style N-API)', async () => {
     const tarBytes = await buildTarBuffer(
       ['linux-x64', 'win32-x64'],
       "{ 'defines': ['NAPI_VERSION=10'] }",
@@ -466,7 +466,7 @@ describe('probePrebuilds', () => {
     expect(r.hasBindingGyp).toBe(true)
   })
 
-  it('老式平铺 + binding.gyp 无 N-API 标记 → 仍 unknown（但 binding.gyp 存在被标出）', async () => {
+  it('old flat + binding.gyp without an N-API marker → still unknown (but hasBindingGyp is set)', async () => {
     const tarBytes = await buildTarBuffer(
       ['linux-x64'],
       "{ 'defines': ['V8_DEPRECATION_WARNINGS=1'] }",
@@ -477,28 +477,28 @@ describe('probePrebuilds', () => {
     expect(r.hasBindingGyp).toBe(true)
   })
 
-  it('N-API 产物（node.napi.node）→ matched（跨 ABI 稳定）', async () => {
+  it('N-API artifact (node.napi.node) → matched (stable across ABIs)', async () => {
     const tarBytes = await buildTarBuffer(['linux-x64/node.napi'])
     const fetchImpl = mockFetchReturningTar(tarBytes)
     const r = await probePrebuilds('https://example/x.tgz', env, { fetchImpl })
     expect(r.status).toBe('matched')
   })
 
-  it('ABI 匹配产物（node.abi127.node）→ matched', async () => {
+  it('ABI-matching artifact (node.abi127.node) → matched', async () => {
     const tarBytes = await buildTarBuffer(['linux-x64/node.abi127'])
     const fetchImpl = mockFetchReturningTar(tarBytes)
     const r = await probePrebuilds('https://example/x.tgz', env, { fetchImpl })
     expect(r.status).toBe('matched')
   })
 
-  it('ABI 不匹配产物（node.abi115.node）→ absent（本平台有产物但 ABI 不符）', async () => {
+  it('ABI-mismatching artifact (node.abi115.node) → absent (present, but the ABI differs)', async () => {
     const tarBytes = await buildTarBuffer(['linux-x64/node.abi115'])
     const fetchImpl = mockFetchReturningTar(tarBytes)
     const r = await probePrebuilds('https://example/x.tgz', env, { fetchImpl })
     expect(r.status).toBe('absent')
   })
 
-  it('读完整包仍无本平台产物 → status=absent', async () => {
+  it('whole package read with no artifact for this platform → status=absent', async () => {
     const tarBytes = await buildTarBuffer(['win32-x64'])
     const fetchImpl = mockFetchReturningTar(tarBytes)
     const r = await probePrebuilds('https://example/x.tgz', env, { fetchImpl })
@@ -506,7 +506,7 @@ describe('probePrebuilds', () => {
     expect(r.observed).toEqual(['win32-x64.node'])
   })
 
-  it('新式子目录自定义命名（bcrypt 式，ABI 无标注）→ unknown', async () => {
+  it('new subdirectory with a custom name (bcrypt style, no ABI tag) → unknown', async () => {
     const tarBytes = await buildTarBuffer(['linux-x64/bcrypt.glibc', 'linux-x64/bcrypt.musl'])
     const fetchImpl = mockFetchReturningTar(tarBytes)
     const r = await probePrebuilds('https://example/x.tgz', env, { fetchImpl })
@@ -514,7 +514,7 @@ describe('probePrebuilds', () => {
     expect(r.observed).toContain('linux-x64/bcrypt.glibc.node')
   })
 
-  it('新式子目录自定义命名 + napiBuild → matched（bcrypt --napi 产物实为 N-API）', async () => {
+  it('new subdirectory custom name + napiBuild → matched (bcrypt --napi is really N-API)', async () => {
     const tarBytes = await buildTarBuffer(['linux-x64/bcrypt.glibc', 'linux-x64/bcrypt.musl'])
     const fetchImpl = mockFetchReturningTar(tarBytes)
     const r = await probePrebuilds('https://example/x.tgz', env, { fetchImpl, napiBuild: true })
@@ -522,7 +522,7 @@ describe('probePrebuilds', () => {
     expect(r.observed).toContain('linux-x64/bcrypt.glibc.node')
   })
 
-  it('musl 机器对子目录 glibc 变体 → absent（libc 不匹配）', async () => {
+  it('musl machine against a subdirectory glibc variant → absent (libc mismatch)', async () => {
     const tarBytes = await buildTarBuffer(['linux-x64/bcrypt.glibc'])
     const fetchImpl = mockFetchReturningTar(tarBytes)
     const muslEnv: Environment = { ...env, libc: 'musl' }
@@ -530,16 +530,16 @@ describe('probePrebuilds', () => {
     expect(r.status).toBe('absent')
   })
 
-  it('命中安全上限仍未读完 → status=unknown（绝不当作缺失）', async () => {
+  it('safety cap hit before the stream ends → status=unknown (never read as missing)', async () => {
     const tarBytes = await buildTarBuffer(['linux-x64/node.napi'])
-    // 只投喂 tar 前 100 字节且不结束流；maxBytes=50 使首 chunk 后即触顶，
-    // 此时产物 header 尚未被完整解析 → unknown，而非误判 matched/absent。
+    // Feed only the first 100 tar bytes and never end the stream; maxBytes=50 caps it after the
+    // first chunk, before the artifact header is fully parsed → unknown, not matched/absent.
     const fetchImpl: HttpLike = async () => {
       const partial = tarBytes.subarray(0, 100)
       const stream = new ReadableStream<Uint8Array>({
         start(c) {
           c.enqueue(partial)
-          // 不 close：模拟被预算掐断的网络流
+          // no close: this mimics a network stream cut off by the budget
         },
       })
       return { status: 200, ok: true, body: stream }
@@ -548,29 +548,29 @@ describe('probePrebuilds', () => {
     expect(r.status).toBe('unknown')
   })
 
-  it('HTTP 非 2xx 抛错（由调用方折叠为可降级结果）', async () => {
+  it('HTTP non-2xx throws (the caller folds that into a degradable result)', async () => {
     const fetchImpl = async () => ({ status: 500, ok: false, body: null })
     await expect(probePrebuilds('https://example/x.tgz', env, { fetchImpl })).rejects.toThrow()
   })
 })
 
 describe('abiMatchFor', () => {
-  it('napi → match（跨 ABI）', () => {
+  it('napi → match (across ABIs)', () => {
     expect(abiMatchFor(parsePrebuildEntry('linux-x64/node.napi.node')!, env)).toBe('match')
   })
-  it('abiN 命中当前 ABI → match', () => {
+  it('abiN matching the current ABI → match', () => {
     expect(abiMatchFor(parsePrebuildEntry('linux-x64/node.abi127.node')!, env)).toBe('match')
   })
-  it('abiN 不匹配 → no-match', () => {
+  it('abiN not matching → no-match', () => {
     expect(abiMatchFor(parsePrebuildEntry('linux-x64/node.abi115.node')!, env)).toBe('no-match')
   })
-  it('无 ABI 标注（老式平铺 / 自定义命名）→ unknown', () => {
+  it('no ABI tag (old flat / custom name) → unknown', () => {
     expect(abiMatchFor(parsePrebuildEntry('linux-x64.node')!, env)).toBe('unknown')
     expect(abiMatchFor(parsePrebuildEntry('linux-x64/bcrypt.glibc.node')!, env)).toBe('unknown')
   })
-  it('无 ABI 标注 + napiBuild → match（bcrypt 的 bcrypt.glibc.node 实为 N-API）', () => {
+  it('no ABI tag + napiBuild → match (bcrypt.glibc.node really is N-API)', () => {
     expect(abiMatchFor(parsePrebuildEntry('linux-x64/bcrypt.glibc.node')!, env, true)).toBe('match')
-    // napiBuild 不应影响已显式标 ABI 的产物
+    // napiBuild must not affect an artifact that already states its ABI
     expect(abiMatchFor(parsePrebuildEntry('linux-x64/node.abi115.node')!, env, true)).toBe(
       'no-match',
     )
@@ -578,7 +578,7 @@ describe('abiMatchFor', () => {
 })
 
 describe('fetchManifest', () => {
-  it('读 registry 单版本 manifest 的 dist.tarball + 元数据', async () => {
+  it('reads dist.tarball + metadata from a single-version registry manifest', async () => {
     const fetchImpl = async (url: string) => {
       expect(url).toContain('registry.npmjs.org/sharp/0.33.0')
       const body = new ReadableStream<Uint8Array>({
@@ -613,7 +613,7 @@ describe('fetchManifest', () => {
     expect(isNapiBuild(m.meta)).toBe(true)
   })
 
-  it('非 2xx 抛错', async () => {
+  it('non-2xx throws', async () => {
     const fetchImpl = async () => ({ status: 404, ok: false, body: null })
     await expect(fetchManifest('nope', '1.0.0', fetchImpl)).rejects.toThrow()
   })
@@ -631,7 +631,7 @@ describe('probeRemoteHead', () => {
     const fetchImpl = async () => ({ status: 404, ok: false, body: null })
     expect(await probeRemoteHead('https://x', { fetchImpl })).toBe('source-build')
   })
-  it('网络异常 → unverified（不武断）', async () => {
+  it('network failure → unverified (no guessing)', async () => {
     const fetchImpl = async () => {
       throw new Error('ECONNRESET')
     }

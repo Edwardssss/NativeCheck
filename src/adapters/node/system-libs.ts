@@ -4,7 +4,7 @@
  * Best-effort, name-based heuristic. The library dependency lives in the C
  * source / binding.gyp, invisible to a zero-network lockfile scan, so a
  * name lookup is the only offline signal available. It is used ONLY to emit a
- * "可能缺 <lib>" advisory for SourceBuild findings — it never changes risk or
+ * "possibly missing <lib>" advisory for SourceBuild findings — it never changes risk or
  * blockers (ADR-001: do not predict install success; the package may bundle the
  * library, or the name association may be wrong).
  */
@@ -27,7 +27,7 @@ import { SYSTEM_LIBS, type SystemLibEntry } from '../../env/system-libs'
  * Explicitly EXCLUDED (they vendor their library — compiled fine on the bare
  * image, or bundle SQLite's amalgamation): node-opus (opus), mmmagic (libmagic),
  * nanomsg, node-expat (expat), sqlite3 / node-sqlite3 (SQLite). Mapping them
- * would emit a false "可能缺 X" hint.
+ * would emit a false "possibly missing X" hint.
  */
 const SYSTEM_LIB_HINTS: Readonly<Record<string, string>> = {
   // Docker-verified: failed on bare image, needs the -dev package

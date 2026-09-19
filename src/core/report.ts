@@ -1,7 +1,7 @@
 /**
  * Report model and aggregation.
  *
- * Maps to design doc `temp/NativeCheck_项目实施方案.md` §9.4, §11.3, §11.4
+ * Maps to design doc §9.4, §11.3, §11.4
  */
 
 import type {

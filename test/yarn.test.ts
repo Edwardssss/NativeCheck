@@ -76,31 +76,33 @@ __metadata:
 `
 
 describe('parseYarnLockfile (v1 classic)', () => {
-  it('解析顶层 entry + optional 平台簇（Pattern A 信号）', () => {
+  it('parses top-level entries + the optional platform cluster (pattern A signal)', () => {
     const list = parseYarnLockfile(V1_SAMPLE)
     const byName = new Map(list.map((p) => [p.name, p]))
 
     expect(list.length).toBe(3)
     const esbuild = byName.get('esbuild')
     expect(esbuild?.version).toBe('0.19.12')
-    // optionalDependencies 边标记为 optional → classify 判 Pattern A。
+    // optionalDependencies edges are marked optional → classify reports pattern A.
     expect(esbuild?.dependencies?.['@esbuild/linux-x64']?.optional).toBe(true)
 
     const bs = byName.get('better-sqlite3')
     expect(bs?.dependencies?.['bindings']).toEqual({ name: 'bindings' })
     expect(bs?.dependencies?.['prebuild-install']).toEqual({ name: 'prebuild-install' })
-    // yarn 不记录 install 脚本。
+    // yarn records no install scripts, so the flag must stay `false` here: the
+    // adapter has no equivalent field to read (pnpm has requiresBuild, yarn has
+    // nothing), and `undefined` would be read as "unknown" downstream.
     expect(bs?.hasInstallScript).toBe(false)
   })
 
-  it('空 / 非 lockfile → 空列表（Fail Closed）', () => {
+  it('empty / not a lockfile → empty list (fail closed)', () => {
     expect(parseYarnLockfile('')).toEqual([])
     expect(parseYarnLockfile('not a lockfile at all')).toEqual([])
   })
 })
 
 describe('parseYarnLockfile (Berry __metadata)', () => {
-  it('解析 Berry entry + dependencies 边', () => {
+  it('parses Berry entries + dependency edges', () => {
     const list = parseYarnLockfile(BERRY_SAMPLE)
     const byName = new Map(list.map((p) => [p.name, p]))
 
@@ -109,15 +111,15 @@ describe('parseYarnLockfile (Berry __metadata)', () => {
     expect(bs?.dependencies?.['node-gyp']).toEqual({ name: 'node-gyp' })
     expect(bs?.dependencies?.['prebuild-install']).toEqual({ name: 'prebuild-install' })
 
-    // Berry 平台包用独立 entry（conditions），不是 optional 边 → 无 Pattern A 边。
+    // Berry platform packages use their own entries (conditions), not optional edges,
     const platform = byName.get('@esbuild/linux-x64')
     expect(platform?.version).toBe('0.19.12')
   })
 
-  it('别名键（alias@npm:real@range）解析为真实包名', () => {
-    // Berry 把别名写成 `"my-alias@npm:node-pty@^1.0.0"`，entry 描述的是 node-pty
-    // （tarball、install 脚本、构建工具依赖都来自它）。不剥别名壳的话，name 会变成
-    // `my-alias@npm:node-pty`，所有按包名查表的规则都会失效。
+  it('an alias key (alias@npm:real@range) resolves to the real package name', () => {
+    // Berry writes aliases as `"my-alias@npm:node-pty@^1.0.0"`, and the entry describes
+    // node-pty itself (tarball, install script, build-tool dependencies all come from it).
+    // Leaving the alias shell on would yield `my-alias@npm:node-pty`, and every rule that
     const list = parseYarnLockfile(`__metadata:
   version: 8
 
@@ -132,7 +134,7 @@ describe('parseYarnLockfile (Berry __metadata)', () => {
   })
 })
 
-describe('yarn 集成 · scan 真实 yarn.lock（零网络）', () => {
+describe('yarn integration · scan against a real yarn.lock (zero network)', () => {
   it('yarn v1：esbuild → Pattern A，better-sqlite3 → Pattern C', async () => {
     const { report, unsupported } = await scan(join(testdata, 'yarn-v1'), {
       mode: 'fast',
@@ -150,7 +152,7 @@ describe('yarn 集成 · scan 真实 yarn.lock（零网络）', () => {
     expect(bs?.pattern).toBe('RemoteDownload')
   })
 
-  it('yarn berry：better-sqlite3 依赖边仍在（C），esbuild 无 optional 簇信号', async () => {
+  it('yarn berry: better-sqlite3 keeps its dependency edge (C), esbuild has no optional cluster', async () => {
     const { report, unsupported } = await scan(join(testdata, 'yarn-berry'), {
       mode: 'fast',
       env,
@@ -158,17 +160,17 @@ describe('yarn 集成 · scan 真实 yarn.lock（零网络）', () => {
     expect(unsupported).toBeUndefined()
     expect(report.summary.networkCalls).toBe(0)
 
-    // Berry lockfile 保留 dependencies 边 → better-sqlite3 仍是 C。
+    // The Berry lockfile keeps dependency edges → better-sqlite3 is still C.
     const bs = report.findings.find((f) => f.pkg.name === 'better-sqlite3')
     expect(bs?.pattern).toBe('RemoteDownload')
 
-    // Berry 无 optionalDependencies → esbuild 型 Pattern A 在 berry 下不出现。
-    // 这是 berry lockfile 的信息限制（文档化），非误报。
+    // Berry has no optionalDependencies → an esbuild-style pattern A cannot appear.
+    // That is a documented limit of the Berry lockfile, not a false positive.
     const esbuild = report.findings.find((f) => f.pkg.name === 'esbuild')
     expect(esbuild).toBeUndefined()
   })
 
-  it('真实 v1 项目 sample 能被 parser 完整读取（防空跑）', () => {
+  it('a real v1 project sample parses completely (guards against a no-op parser)', () => {
     const real = readFileSync(join(testdata, 'yarn-v1', 'yarn.lock'), 'utf8')
     const list = parseYarnLockfile(real)
     expect(list.length).toBeGreaterThan(30)
