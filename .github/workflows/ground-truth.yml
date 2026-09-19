@@ -1,16 +1,30 @@
 name: ground-truth
 
 # Ground Truth Docker matrix: real npm installs plus a compiler-wrapper
-# wrapper, producing L1/L2/L3 accuracy numbers to catch rule decay. Slow,
-# independent from the main CI, scheduled weekly + manual trigger.
+# wrapper, producing L1/L2/L3 accuracy numbers to catch rule decay.
 #
-# Run the main CI once before this to ensure the code is testable. This job
-# runs the glibc cells on a linux-x64 runner; alpine (musl) and darwin/win32
-# are covered locally / on dedicated runners (see README).
+# Two cadences, because they answer different questions:
+#   - weekly (plus manual): the full glibc + musl matrix on an ubuntu runner;
+#     alpine (musl) and darwin/win32 are covered locally / on dedicated runners.
+#   - on pull requests that can move accuracy: one glibc cell, so a rule change is
+#     measured before it merges rather than the following Monday.
+#
+# The gate lives in collect.py's exit code (--gate): FN 0%, FP 5%, and a minimum
+# number of samples so a run that measured nothing cannot pass.
+#
+# Run the main CI once before this to ensure the code is testable.
 on:
   workflow_dispatch: # manual: repo Actions → Run workflow
   schedule:
     - cron: '0 3 * * 1' # every Monday 03:00 UTC
+  pull_request:
+    paths:
+      - 'src/**'
+      - 'fixtures/**'
+      - 'testdata/ground-truth/**'
+      - 'package.json'
+      - 'package-lock.json'
+      - '.github/workflows/ground-truth.yml'
 
 jobs:
   matrix:
@@ -49,29 +63,49 @@ jobs:
           NC_LIBMODES: ${{ matrix.cell.libc }}
         run: bash testdata/ground-truth/run-matrix.sh
 
-      # 2) Aggregate the four-square table (collect.py auto-reads prediction.json
-      #    inside each cell; no --predict needed)
-      - name: Collect L2 table
-        run: python3 testdata/ground-truth/collect.py testdata/ground-truth/out --blockers
-
-      # 3) Threshold gate: fail when the L2 false-negative rate exceeds the cap
-      #    (prevents silent rule decay)
-      - name: Enforce FN gate
-        run: |
-          out=$(python3 testdata/ground-truth/collect.py testdata/ground-truth/out --blockers 2>&1)
-          echo "$out"
-          # Extract the FN rate; anything above 5% fails (FN is the most severe
-          # error class, weighted x2)
-          rate=$(echo "$out" | sed -n 's/.*L2 FN miss rate=\([0-9.]*\)%.*/\1/p' | head -1)
-          if [ -n "$rate" ] && awk "BEGIN{exit !($rate > 5)}"; then
-            echo "::error::L2 FN miss rate ${rate}% exceeds the 5% threshold"
-            exit 1
-          fi
-          echo "FN gate passed (${rate:-n/a}%)"
+      # 2) Aggregate the four-square table and enforce the thresholds: FN 0%
+      #    and FP <= 5%, with a floor on the sample count. The exit code is the
+      #    contract — nothing scrapes the printed table for a rate any more.
+      #    (collect.py auto-reads prediction.json inside each cell; no --predict.)
+      - name: Collect L2 table and enforce the accuracy gate
+        run: python3 testdata/ground-truth/collect.py testdata/ground-truth/out --blockers --gate
 
       - name: Upload artifacts
         uses: actions/upload-artifact@v4
         if: always()
         with:
           name: ground-truth-${{ matrix.cell.node }}-${{ matrix.cell.libc }}
+          path: testdata/ground-truth/out/
+
+  # One cell on pull requests that can move accuracy (see the `paths` filter
+  # above). The classifier is the same code in every cell, so a single glibc
+  # cell on linux-x64 — the cell a runner can produce natively — is enough to
+  # notice decay before merge; the weekly matrix keeps the other five honest.
+  pr-cell:
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: npm
+      - run: npm ci
+      - run: npm run build # dist/cli.js is what predict.sh runs inside the container
+
+      - name: Measure and predict one glibc cell (Node 22)
+        env:
+          NC_NODE_MAJORS: '22'
+          NC_LIBMODES: glibc
+        run: bash testdata/ground-truth/run-matrix.sh
+
+      - name: Collect L2 table and enforce the accuracy gate
+        run: python3 testdata/ground-truth/collect.py testdata/ground-truth/out --blockers --gate
+
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: ground-truth-pr-cell
           path: testdata/ground-truth/out/
