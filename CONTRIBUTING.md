@@ -28,7 +28,10 @@ enforces.
 
 `npm run audit` checks the runtime dependency tree against npm's advisories — it
 is the step CI runs, and it pins the registry because the advisory endpoint only
-exists on `registry.npmjs.org`.
+exists on `registry.npmjs.org`. Advisories at or above `high` fail the build; an
+**unreachable** advisory service (503 maintenance, DNS, offline) warns and passes
+instead, because a third party's outage must not block a merge or a release. The
+next run retries.
 
 A vulnerability in NativeCheck itself should not be reported in a public issue:
 see [SECURITY.md](./SECURITY.md).
