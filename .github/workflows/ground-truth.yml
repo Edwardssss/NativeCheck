@@ -81,8 +81,13 @@ jobs:
   # above). The classifier is the same code in every cell, so a single glibc
   # cell on linux-x64 — the cell a runner can produce natively — is enough to
   # notice decay before merge; the weekly matrix keeps the other five honest.
+  #
+  # Dependabot is skipped: a version bump touches package.json and the lockfile,
+  # which are in the paths filter, but it cannot move the classifier — and if a
+  # dependency did change ingest behaviour, the fixture expectations fail in
+  # seconds instead of after a Docker matrix.
   pr-cell:
-    if: github.event_name == 'pull_request'
+    if: github.event_name == 'pull_request' && github.actor != 'dependabot[bot]'
     runs-on: ubuntu-latest
     timeout-minutes: 30
     steps:

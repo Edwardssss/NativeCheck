@@ -18,9 +18,20 @@ updates:
       runtime-patches:
         dependency-type: production
         update-types: ['patch']
+      # Majors still arrive — those are the updates that change behaviour — but as
+      # one PR per ecosystem instead of one per dependency, so reviewing them is a
+      # decision rather than a queue. They are never auto-merged.
+      majors:
+        patterns: ['*']
+        update-types: ['major']
 
-  # The workflows pin actions by major tag; this keeps those tags moving.
+  # The workflows pin actions by major tag; this keeps those tags moving. All of
+  # them land in one PR: an action bump is not a behaviour change to review one by
+  # one.
   - package-ecosystem: github-actions
     directory: '/'
     schedule:
       interval: monthly
+    groups:
+      actions:
+        patterns: ['*']
