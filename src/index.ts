@@ -32,7 +32,9 @@ export {
   loadVerifyCache,
   saveVerifyCache,
   lookupCachedOutcome,
+  pruneVerifyCache,
   defaultVerifyCacheFs,
+  DEFAULT_TTL_MS,
 } from './adapters/node/verify-cache'
 export {
   fetchManifest,

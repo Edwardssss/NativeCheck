@@ -45,8 +45,9 @@ function classifySegment(segment: string): Exclude<ScriptIntent, 'download_then_
   // `node-gyp rebuild|build|configure` — word boundaries matter so we don't swallow `node-gyp-build`
   if (/\bnode-gyp\s+(rebuild|build|configure)\b/.test(segment)) return 'compile'
   if (/\bprebuild-install\b/.test(segment)) return 'download'
+  // `\bnode-pre-gyp\b` already covers `@mapbox/node-pre-gyp` (the scope prefix
+  // ends on a non-word character), so no separate branch is needed.
   if (/\bnode-pre-gyp\b/.test(segment)) return 'download'
-  if (/\b@mapbox\/node-pre-gyp\b/.test(segment)) return 'download'
   if (/\bnode-gyp-build\b/.test(segment)) return 'select'
   // `node -e "..."` / `node --eval` inline eval: it can execute arbitrary code,
   // but in practice these are mostly benign scripts such as funding notices or

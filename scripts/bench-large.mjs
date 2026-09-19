@@ -1,12 +1,13 @@
 // 一次性性能基线脚本：生成 N 包的大 lockfile，benchmark fast scan 耗时。
 // 用法：node scripts/bench-large.mjs [N]   （默认 2000）
-// 用完即删（`_` 前缀约定）。
+// 需要先 `npm run build`（它跑的是 dist/cli.js）。
 import { mkdtempSync, writeFileSync, rmSync } from 'node:fs'
 import { join } from 'node:path'
 import { tmpdir } from 'node:os'
 import { execFileSync } from 'node:child_process'
 
-const NODE = 'C:/Users/13015/.workbuddy/binaries/node/versions/22.22.2-2/node.exe'
+// 用当前解释器，而不是写死某一台机器的 node 路径。
+const NODE = process.execPath
 const CLI = new URL('../dist/cli.js', import.meta.url).pathname.replace(/^\/([A-Za-z]:)/, '$1')
 const N = Number(process.argv[2] ?? 2000)
 

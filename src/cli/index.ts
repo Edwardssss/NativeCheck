@@ -124,6 +124,16 @@ async function runTarget(
   }
 }
 
+/** Flags the scan path understands; anything else is a typo, not a feature. */
+const SCAN_FLAGS = new Set(['--deep', '--json', '--ci', '--cache', '--no-cache', '--help', '-h'])
+const TARGET_FLAGS = new Set(['--deep', '--json', '--help', '-h'])
+
+/** Unknown `--flags` — citty silently collects them as extra booleans, so a typo
+ * like `--depp` would just do nothing. Reject them explicitly instead. */
+function unknownFlags(argv: readonly string[], known: ReadonlySet<string>): string[] {
+  return argv.filter((arg) => arg.startsWith('-') && !known.has(arg))
+}
+
 /** Top-level dispatch. Returns true when handled; false means "show help". */
 async function dispatch(argv: readonly string[]): Promise<boolean> {
   const first = argv[0]
@@ -144,6 +154,13 @@ async function dispatch(argv: readonly string[]): Promise<boolean> {
   if (first === 'target') {
     const query = argv[1]
     const rest = argv.slice(2)
+    const bad = unknownFlags(rest, TARGET_FLAGS)
+    if (bad.length > 0) {
+      console.log(`${pc.yellow('未知参数:')} ${bad.join(' ')}`)
+      console.log(`${pc.yellow('用法:')} nativecheck target <pkg>[@version] [--deep] [--json]`)
+      process.exitCode = 1
+      return true
+    }
     await runTarget(query, {
       deep: rest.includes('--deep'),
       json: rest.includes('--json'),
@@ -151,6 +168,13 @@ async function dispatch(argv: readonly string[]): Promise<boolean> {
     return true
   }
   // Anything else (`.`, a directory, or a bare --flag) is treated as scan.
+  const bad = unknownFlags(argv, SCAN_FLAGS)
+  if (bad.length > 0) {
+    console.log(`${pc.yellow('未知参数:')} ${bad.join(' ')}`)
+    console.log(HELP)
+    process.exitCode = 1
+    return true
+  }
   const parsed = parseArgs([...argv], SCAN_ARGS)
   // citty puts positionals into `dir`; fall back to `_`, then to the current directory.
   const positionals = parsed._ ?? []
