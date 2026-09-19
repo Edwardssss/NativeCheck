@@ -129,3 +129,19 @@ describe('robustness · 畸形 lockfile（不 panic，Fail Closed）', () => {
     })
   })
 })
+
+describe('robustness · 不支持的 lockfile 格式（Fail Closed）', () => {
+  it('文本 bun.lock（Bun 1.2+ 默认）→ 明确指向它，而不是「找不到 lockfile」', async () => {
+    await withProject({ 'bun.lock': '{ "lockfileVersion": 0 }' }, async (root) => {
+      const { report, unsupported } = await scan(root, { mode: 'fast', env })
+      expect(unsupported?.detected).toBe('bun.lock (text)')
+      expect(unsupported?.reason).toContain('bun.lockb')
+      // 支持列表来自 ingest 的真实能力，不是写死的 npm
+      const supported = report.unsupported?.supported.join(' ') ?? ''
+      expect(supported).toContain('bun.lockb')
+      expect(supported).toContain('pnpm')
+      expect(report.findings).toEqual([])
+      expect(report.summary.networkCalls).toBe(0)
+    })
+  })
+})
